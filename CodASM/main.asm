@@ -1,17 +1,15 @@
-; =====================================================================
 ; ARQUIVO: main.asm
 ; OBJETIVO: Loop principal do Jogo de Luta e controle de video
-; =====================================================================
 
 segment code
 ..start:
-    ; Declarando que vamos usar as funcoes graficas de outro arquivo (linec.asm)
+    ; Declarando que vamos usar as funcoes graficas de outro arquivo
     extern plot_xy
     extern line
     extern circle
     extern full_circle
+    extern desenha_cenario      ; Importando a sua nova funcao
     
-    ; Declarando que vamos usar a variavel global de cor definida no linec.asm
     extern cor
 
     ; 1. Inicializacao dos registradores de segmento
@@ -21,7 +19,7 @@ segment code
     MOV SS, AX
     MOV SP, stacktop
 
-    ; 2. Salvar modo corrente de video (para nao bugar o DOSBox ao sair)
+    ; 2. Salvar modo corrente de video
     MOV AH, 0Fh
     INT 10h
     MOV [modo_anterior], AL
@@ -31,27 +29,11 @@ segment code
     MOV AH, 0
     INT 10h
 
-    ; =================================================================
-    ; TESTE DE DESENHO: O Chao da Arena
-    ; =================================================================
-    MOV byte [cor], 15      ; 15 corresponde a branco intenso no Linec
-
-    ; Passagem de parametros para desenhar a reta (y=400, x vai de 0 a 639)
-    MOV AX, 0
-    PUSH AX                 ; x1 = 0
-    MOV AX, 400
-    PUSH AX                 ; y1 = 400
-    MOV AX, 639
-    PUSH AX                 ; x2 = 639
-    MOV AX, 400
-    PUSH AX                 ; y2 = 400
-    CALL line               ; Chama a funcao do arquivo linec.asm
-    ; =================================================================
+    ; DESENHO DO CENARIO E LUTADORES
+    CALL desenha_cenario        ; Agora sim! Desenha a arena antes de entrar no loop
 
 loop_principal:
-    ; 4. Ler o teclado para manter o jogo rodando ate pedir para sair
-    ; Nota: Estamos usando a INT 21h temporariamente apenas para este teste inicial.
-    ; Mais tarde, o projeto exige que isso seja substituido pela INT 9h.
+    ; 4. Ler o teclado para manter o jogo rodando
     MOV AH, 0Bh
     INT 21h                 ; Verifica o buffer do teclado
     CMP AL, 0
@@ -76,15 +58,12 @@ sair_jogo:
     MOV AX, 4C00h
     INT 21h
 
-; =====================================================================
 ; SEGMENTO DE DADOS
-; =====================================================================
 segment data
     modo_anterior db 0
 
-; =====================================================================
+
 ; SEGMENTO DE PILHA
-; =====================================================================
 segment stack stack
     resb 512
 stacktop:

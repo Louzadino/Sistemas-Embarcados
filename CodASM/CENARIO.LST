@@ -1,0 +1,68 @@
+     1                                  ; =====================================================================
+     2                                  ; ARQUIVO: cenario.asm
+     3                                  ; OBJETIVO: Desenhar a arena de luta, limites e HUD
+     4                                  ; =====================================================================
+     5                                  
+     6                                  segment code
+     7                                      global desenha_cenario      ; Torna a funcao visivel para o main.asm
+     8                                      
+     9                                      extern line                 ; Importa a funcao de desenhar reta do linec.asm
+    10                                      extern cor                  ; Importa a variavel global de cor do linec.asm
+    11                                  
+    12                                  desenha_cenario:
+    13                                      ; Salva o contexto na pilha (boa pratica para nao corromper registradores)
+    14 00000000 55                          PUSH BP
+    15 00000001 89E5                        MOV BP, SP
+    16 00000003 50                          PUSH AX
+    17                                  
+    18                                      ; Define a cor dos delimitadores como branco intenso (15)
+    19 00000004 C606[0000]0F                MOV byte [cor], 15
+    20                                  
+    21                                      ; 1. Desenhar o Chao (Y=50, indo de X=0 ate X=639)
+    22 00000009 B80000                      MOV AX, 0
+    23 0000000C 50                          PUSH AX
+    24 0000000D B83200                      MOV AX, 50
+    25 00000010 50                          PUSH AX
+    26 00000011 B87F02                      MOV AX, 639
+    27 00000014 50                          PUSH AX
+    28 00000015 B83200                      MOV AX, 50
+    29 00000018 50                          PUSH AX
+    30 00000019 E8(0000)                    CALL line
+    31                                  
+    32                                      ; 2. Desenhar o Teto (Y=400, indo de X=0 ate X=639)
+    33 0000001C B80000                      MOV AX, 0
+    34 0000001F 50                          PUSH AX
+    35 00000020 B89001                      MOV AX, 400
+    36 00000023 50                          PUSH AX
+    37 00000024 B87F02                      MOV AX, 639
+    38 00000027 50                          PUSH AX
+    39 00000028 B89001                      MOV AX, 400
+    40 0000002B 50                          PUSH AX
+    41 0000002C E8(0000)                    CALL line
+    42                                  
+    43                                      ; 3. Desenhar Limite Esquerdo (X=5, indo de Y=50 ate Y=400)
+    44 0000002F B80500                      MOV AX, 5
+    45 00000032 50                          PUSH AX
+    46 00000033 B83200                      MOV AX, 50
+    47 00000036 50                          PUSH AX
+    48 00000037 B80500                      MOV AX, 5
+    49 0000003A 50                          PUSH AX
+    50 0000003B B89001                      MOV AX, 400
+    51 0000003E 50                          PUSH AX
+    52 0000003F E8(0000)                    CALL line
+    53                                  
+    54                                      ; 4. Desenhar Limite Direito (X=634, indo de Y=50 ate Y=400)
+    55 00000042 B87A02                      MOV AX, 634
+    56 00000045 50                          PUSH AX
+    57 00000046 B83200                      MOV AX, 50
+    58 00000049 50                          PUSH AX
+    59 0000004A B87A02                      MOV AX, 634
+    60 0000004D 50                          PUSH AX
+    61 0000004E B89001                      MOV AX, 400
+    62 00000051 50                          PUSH AX
+    63 00000052 E8(0000)                    CALL line
+    64                                  
+    65                                      ; Restaura o contexto e retorna
+    66 00000055 58                          POP AX
+    67 00000056 5D                          POP BP
+    68 00000057 C3                          RET
