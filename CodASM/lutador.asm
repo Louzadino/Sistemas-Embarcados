@@ -14,6 +14,7 @@ segment data
 
 segment code
     global desenha_lutadores
+    global apaga_lutadores
     
     extern line
     extern circle
@@ -147,6 +148,139 @@ desenha_lutadores:
     CALL line
 
     ; Perna Direita P2
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 35
+    PUSH AX
+    MOV AX, [p2_x]
+    ADD AX, 15
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+
+    POP AX
+    POP BP
+    RET
+
+apaga_lutadores:
+    PUSH BP
+    MOV BP, SP
+    PUSH AX
+
+    MOV byte [cor], 0   ; Preto
+    
+    ; APAGA P1
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    PUSH AX
+    MOV AX, 10
+    PUSH AX
+    CALL circle
+
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 35
+    PUSH AX
+    CALL line
+
+    MOV AX, [p1_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 20
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 15
+    PUSH AX
+    CALL line
+
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 35
+    PUSH AX
+    MOV AX, [p1_x]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 35
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 15
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+
+    ; APAGA P2
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    PUSH AX
+    MOV AX, 10
+    PUSH AX
+    CALL circle
+
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 35
+    PUSH AX
+    CALL line
+
+    MOV AX, [p2_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 20
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 15
+    PUSH AX
+    CALL line
+
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 35
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
