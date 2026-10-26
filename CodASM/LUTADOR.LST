@@ -1,0 +1,165 @@
+     1                                  ; OBJETIVO: Desenhar e gerenciar os lutadores
+     2                                  
+     3                                  segment data
+     4                                      ; Variaveis globais de posicao
+     5                                      global p1_x, p1_y, p2_x, p2_y
+     6                                      
+     7                                      ; O chao esta em Y=50. O centro da cabeca ficara em Y=115.
+     8                                      ; Como o raio e 10 e o corpo desce 65 pixels, os pes tocam exatamente no 50
+     9 00000000 9600                        p1_x dw 150     ; Jogador 1 (Esquerda)
+    10 00000002 7300                        p1_y dw 115
+    11                                      
+    12 00000004 EA01                        p2_x dw 490     ; Jogador 2 (Direita)
+    13 00000006 7300                        p2_y dw 115
+    14                                  
+    15                                  segment code
+    16                                      global desenha_lutadores
+    17                                      
+    18                                      extern line
+    19                                      extern circle
+    20                                      extern cor
+    21                                  
+    22                                  desenha_lutadores:
+    23 00000000 55                          PUSH BP
+    24 00000001 89E5                        MOV BP, SP
+    25 00000003 50                          PUSH AX
+    26                                  
+    27                                      ; DESENHAR JOGADOR 1 (AZUL)
+    28 00000004 C606[0000]01                MOV byte [cor], 1   ; Azul
+    29                                  
+    30                                      ; Cabeca P1 (Raio 10)
+    31 00000009 A1[0000]                    MOV AX, [p1_x]
+    32 0000000C 50                          PUSH AX
+    33 0000000D A1[0200]                    MOV AX, [p1_y]
+    34 00000010 50                          PUSH AX
+    35 00000011 B80A00                      MOV AX, 10
+    36 00000014 50                          PUSH AX
+    37 00000015 E8(0000)                    CALL circle
+    38                                  
+    39                                      ; Tronco P1 (Pescoco em Y-10 ate Cintura em Y-35)
+    40 00000018 A1[0000]                    MOV AX, [p1_x]
+    41 0000001B 50                          PUSH AX
+    42 0000001C A1[0200]                    MOV AX, [p1_y]
+    43 0000001F 2D0A00                      SUB AX, 10
+    44 00000022 50                          PUSH AX
+    45 00000023 A1[0000]                    MOV AX, [p1_x]
+    46 00000026 50                          PUSH AX
+    47 00000027 A1[0200]                    MOV AX, [p1_y]
+    48 0000002A 2D2300                      SUB AX, 35
+    49 0000002D 50                          PUSH AX
+    50 0000002E E8(0000)                    CALL line
+    51                                  
+    52                                      ; Bracos P1 (Ombros em Y-15, apontando para a direita)
+    53 00000031 A1[0000]                    MOV AX, [p1_x]
+    54 00000034 2D0A00                      SUB AX, 10
+    55 00000037 50                          PUSH AX
+    56 00000038 A1[0200]                    MOV AX, [p1_y]
+    57 0000003B 2D0F00                      SUB AX, 15
+    58 0000003E 50                          PUSH AX
+    59 0000003F A1[0000]                    MOV AX, [p1_x]
+    60 00000042 051400                      ADD AX, 20
+    61 00000045 50                          PUSH AX
+    62 00000046 A1[0200]                    MOV AX, [p1_y]
+    63 00000049 2D0F00                      SUB AX, 15
+    64 0000004C 50                          PUSH AX
+    65 0000004D E8(0000)                    CALL line
+    66                                  
+    67                                      ; Perna Esquerda P1 (Cintura em Y-35 ate chao em Y-65)
+    68 00000050 A1[0000]                    MOV AX, [p1_x]
+    69 00000053 50                          PUSH AX
+    70 00000054 A1[0200]                    MOV AX, [p1_y]
+    71 00000057 2D2300                      SUB AX, 35
+    72 0000005A 50                          PUSH AX
+    73 0000005B A1[0000]                    MOV AX, [p1_x]
+    74 0000005E 2D0F00                      SUB AX, 15
+    75 00000061 50                          PUSH AX
+    76 00000062 A1[0200]                    MOV AX, [p1_y]
+    77 00000065 2D4100                      SUB AX, 65      ; 115 - 65 = 50 (Toca no chao da arena)
+    78 00000068 50                          PUSH AX
+    79 00000069 E8(0000)                    CALL line
+    80                                  
+    81                                      ; Perna Direita P1
+    82 0000006C A1[0000]                    MOV AX, [p1_x]
+    83 0000006F 50                          PUSH AX
+    84 00000070 A1[0200]                    MOV AX, [p1_y]
+    85 00000073 2D2300                      SUB AX, 35
+    86 00000076 50                          PUSH AX
+    87 00000077 A1[0000]                    MOV AX, [p1_x]
+    88 0000007A 050F00                      ADD AX, 15
+    89 0000007D 50                          PUSH AX
+    90 0000007E A1[0200]                    MOV AX, [p1_y]
+    91 00000081 2D4100                      SUB AX, 65
+    92 00000084 50                          PUSH AX
+    93 00000085 E8(0000)                    CALL line
+    94                                  
+    95                                      ; DESENHAR JOGADOR 2 (VERMELHO)
+    96 00000088 C606[0000]04                MOV byte [cor], 4   ; Vermelho
+    97                                  
+    98                                      ; Cabeca P2
+    99 0000008D A1[0400]                    MOV AX, [p2_x]
+   100 00000090 50                          PUSH AX
+   101 00000091 A1[0600]                    MOV AX, [p2_y]
+   102 00000094 50                          PUSH AX
+   103 00000095 B80A00                      MOV AX, 10
+   104 00000098 50                          PUSH AX
+   105 00000099 E8(0000)                    CALL circle
+   106                                  
+   107                                      ; Tronco P2
+   108 0000009C A1[0400]                    MOV AX, [p2_x]
+   109 0000009F 50                          PUSH AX
+   110 000000A0 A1[0600]                    MOV AX, [p2_y]
+   111 000000A3 2D0A00                      SUB AX, 10
+   112 000000A6 50                          PUSH AX
+   113 000000A7 A1[0400]                    MOV AX, [p2_x]
+   114 000000AA 50                          PUSH AX
+   115 000000AB A1[0600]                    MOV AX, [p2_y]
+   116 000000AE 2D2300                      SUB AX, 35
+   117 000000B1 50                          PUSH AX
+   118 000000B2 E8(0000)                    CALL line
+   119                                  
+   120                                      ; Bracos P2 (Ombros em Y-15, apontando para a esquerda)
+   121 000000B5 A1[0400]                    MOV AX, [p2_x]
+   122 000000B8 050A00                      ADD AX, 10
+   123 000000BB 50                          PUSH AX
+   124 000000BC A1[0600]                    MOV AX, [p2_y]
+   125 000000BF 2D0F00                      SUB AX, 15
+   126 000000C2 50                          PUSH AX
+   127 000000C3 A1[0400]                    MOV AX, [p2_x]
+   128 000000C6 2D1400                      SUB AX, 20
+   129 000000C9 50                          PUSH AX
+   130 000000CA A1[0600]                    MOV AX, [p2_y]
+   131 000000CD 2D0F00                      SUB AX, 15
+   132 000000D0 50                          PUSH AX
+   133 000000D1 E8(0000)                    CALL line
+   134                                  
+   135                                      ; Perna Esquerda P2
+   136 000000D4 A1[0400]                    MOV AX, [p2_x]
+   137 000000D7 50                          PUSH AX
+   138 000000D8 A1[0600]                    MOV AX, [p2_y]
+   139 000000DB 2D2300                      SUB AX, 35
+   140 000000DE 50                          PUSH AX
+   141 000000DF A1[0400]                    MOV AX, [p2_x]
+   142 000000E2 2D0F00                      SUB AX, 15
+   143 000000E5 50                          PUSH AX
+   144 000000E6 A1[0600]                    MOV AX, [p2_y]
+   145 000000E9 2D4100                      SUB AX, 65
+   146 000000EC 50                          PUSH AX
+   147 000000ED E8(0000)                    CALL line
+   148                                  
+   149                                      ; Perna Direita P2
+   150 000000F0 A1[0400]                    MOV AX, [p2_x]
+   151 000000F3 50                          PUSH AX
+   152 000000F4 A1[0600]                    MOV AX, [p2_y]
+   153 000000F7 2D2300                      SUB AX, 35
+   154 000000FA 50                          PUSH AX
+   155 000000FB A1[0400]                    MOV AX, [p2_x]
+   156 000000FE 050F00                      ADD AX, 15
+   157 00000101 50                          PUSH AX
+   158 00000102 A1[0600]                    MOV AX, [p2_y]
+   159 00000105 2D4100                      SUB AX, 65
+   160 00000108 50                          PUSH AX
+   161 00000109 E8(0000)                    CALL line
+   162                                  
+   163 0000010C 58                          POP AX
+   164 0000010D 5D                          POP BP
+   165 0000010E C3                          RET

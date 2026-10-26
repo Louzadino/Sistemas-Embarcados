@@ -1,8 +1,3 @@
-; versão de 10/05/2007
-; corrigido erro de arredondamento na rotina line.
-; circle e full_circle DISPonibilizados por JEfferson Moro em 10/2009
-; 
-
 global plot_xy
 global line
 global circle

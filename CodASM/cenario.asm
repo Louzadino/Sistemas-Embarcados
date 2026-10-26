@@ -1,4 +1,3 @@
-; ARQUIVO: cenario.asm
 ; OBJETIVO: Desenhar a arena de luta, limites e HUD
 
 segment code
