@@ -8,7 +8,13 @@ segment code
     extern desenha_cenario
     extern desenha_lutadores
     extern apaga_lutadores
-    
+
+    ; importações do status
+    extern status_jogadores
+    extern escrever_na_tela
+    extern barra_de_energia
+    extern quadrado
+
     ; Importacoes do teclado
     extern instala_teclado
     extern restaura_teclado
@@ -37,6 +43,7 @@ segment code
 
     CALL desenha_cenario
     CALL desenha_lutadores
+    CALL status_jogadores       ; expõe o status dos jogadores
 
 loop_principal:
     CALL delay

@@ -29,11 +29,11 @@ desenha_cenario:
     ; 2. Desenhar o Teto (Y=400, indo de X=0 ate X=639)
     MOV AX, 0
     PUSH AX
-    MOV AX, 400
+    MOV AX, 300
     PUSH AX
     MOV AX, 639
     PUSH AX
-    MOV AX, 400
+    MOV AX, 300
     PUSH AX
     CALL line
 
@@ -44,7 +44,7 @@ desenha_cenario:
     PUSH AX
     MOV AX, 5
     PUSH AX
-    MOV AX, 400
+    MOV AX, 300
     PUSH AX
     CALL line
 
@@ -55,7 +55,7 @@ desenha_cenario:
     PUSH AX
     MOV AX, 634
     PUSH AX
-    MOV AX, 400
+    MOV AX, 300
     PUSH AX
     CALL line
 
