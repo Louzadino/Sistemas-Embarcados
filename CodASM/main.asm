@@ -1,7 +1,4 @@
-; =====================================================================
-; ARQUIVO: main.asm
 ; OBJETIVO: Loop principal do Jogo de Luta e controle de video
-; =====================================================================
 
 segment code
 ..start:
@@ -49,7 +46,9 @@ loop_principal:
     CALL delay
 
     CMP byte [key_q], 1
-    JE sair_jogo
+    JNE continua
+    JMP sair_jogo
+    continua:
 
     ; Verifica se alguem vai se mover neste frame
     CMP byte [key_a], 1
@@ -66,29 +65,47 @@ loop_principal:
 atualiza_posicoes:
     CALL apaga_lutadores    ; Apaga as posicoes antigas
 
-    ; Processa Jogador 1
+    ; Processa Movimento do Jogador 1 
     CMP byte [key_a], 1
     JNE tenta_d
+    ; Impede que atravesse o limite esquerdo (Parede X=5 + Braço 20 = 25)
+    CMP word [p1_x], 25
+    JLE tenta_d
     SUB word [p1_x], 3
+
 tenta_d:
     CMP byte [key_d], 1
     JNE tenta_left
+    ; Impede que atravesse o Jogador 2 (Distância de segurança de 40px)
+    MOV AX, [p2_x]
+    SUB AX, 40              
+    CMP [p1_x], AX
+    JGE tenta_left
     ADD word [p1_x], 3
 
-    ; Processa Jogador 2
+    ; Processa Movimento do Jogador 2 
 tenta_left:
     CMP byte [key_left], 1
     JNE tenta_right
+    ; Impede que atravesse o Jogador 1 (Distância de segurança de 40px)
+    MOV AX, [p1_x]
+    ADD AX, 40
+    CMP [p2_x], AX
+    JLE tenta_right
     SUB word [p2_x], 3
+
 tenta_right:
     CMP byte [key_right], 1
     JNE finaliza_frame
+    ; Impede que atravesse o limite direito (Parede X=634 - Braço 20 = 614)
+    CMP word [p2_x], 614
+    JGE finaliza_frame
     ADD word [p2_x], 3
 
 finaliza_frame:
     CALL desenha_lutadores  ; Desenha nas novas coordenadas
-    CALL desenha_cenario    ; Restaura as linhas brancas da arena sobrescritas 
-    JMP loop_principal
+    CALL desenha_cenario    ; Restaura as linhas brancas apagadas
+    JMP loop_principal      ; Retorna ao fluxo
 
 sair_jogo:
     ; Restaura o video e o teclado (Requisito 9)
@@ -101,9 +118,7 @@ sair_jogo:
     MOV AX, 4C00h
     INT 21h
 
-; =====================================================================
-; FUNCAO DE DELAY (Ajuste o valor de CX se ficar rapido/lento demais)
-; =====================================================================
+; FUNCAO DE DELAY (Ajustar valor de CX se ficar rapido/lento demais)
 delay:
     PUSH CX
     MOV CX, 0100h       ; Multiplicador externo (ajuste a velocidade aqui)
