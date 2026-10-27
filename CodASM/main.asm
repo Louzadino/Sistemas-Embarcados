@@ -5,17 +5,20 @@ segment code
     extern desenha_cenario
     extern desenha_lutadores
     extern apaga_lutadores
+    extern desenha_soco_p1
 
     ; importações do status
     extern status_jogadores
     extern escrever_na_tela
     extern barra_de_energia
     extern quadrado
+    extern energia_p1, energia_p2
 
     ; Importacoes do teclado
     extern instala_teclado
     extern restaura_teclado
     extern key_a, key_d, key_left, key_right, key_q
+    extern key_t, key_m
     
     ; Variaveis dos lutadores para alteracao de coordenadas
     extern p1_x, p2_x
@@ -48,8 +51,40 @@ loop_principal:
     CMP byte [key_q], 1
     JNE continua
     JMP sair_jogo
-    continua:
+continua:
 
+verifica_ataque_p1:
+    CMP byte [key_t], 1
+    JNE reseta_trava_p1
+    
+    ; Desenha a animação do soco (A nova rotina agora desenhará os dois)
+    CALL apaga_lutadores
+    CALL desenha_soco_p1
+    CALL desenha_cenario
+
+    ; Só aplica dano se o soco for novo (não estava travado)
+    CMP byte [soco_p1_travado], 1
+    JE verifica_movimento
+
+    MOV byte [soco_p1_travado], 1 ; Trava o golpe atual
+
+    ; Verifica Distância: P2_x - P1_x <= 45
+    MOV AX, [p2_x]
+    SUB AX, [p1_x]
+    CMP AX, 45
+    JG verifica_movimento         ; O golpe não alcançou
+
+    ; Acertou! Reduz energia se for maior que zero
+    CMP word [energia_p2], 0
+    JE verifica_movimento
+    DEC word [energia_p2]
+    CALL status_jogadores         ; Atualiza a interface
+    JMP verifica_movimento
+
+reseta_trava_p1:
+    MOV byte [soco_p1_travado], 0
+
+verifica_movimento:
     ; Verifica se alguem vai se mover neste frame
     CMP byte [key_a], 1
     JE atualiza_posicoes
@@ -60,7 +95,7 @@ loop_principal:
     CMP byte [key_right], 1
     JE atualiza_posicoes
 
-    JMP loop_principal      ; Se ninguem se moveu, apenas aguarda
+    JMP loop_principal            ; Se ninguém atacou nem moveu, aguarda o próximo frame
 
 atualiza_posicoes:
     CALL apaga_lutadores    ; Apaga as posicoes antigas
@@ -134,6 +169,7 @@ del1:
 
 segment data
     modo_anterior db 0
+    soco_p1_travado db 0   ; Evita multi-hit no mesmo soco
 
 segment stack stack
     resb 512

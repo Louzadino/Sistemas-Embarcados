@@ -6,11 +6,14 @@
 
 segment data
     global key_a, key_d, key_left, key_right, key_q
+    global key_t, key_m
     key_a       db 0
     key_d       db 0
     key_left    db 0
     key_right   db 0
     key_q       db 0
+    key_t       db 0
+    key_m       db 0
     
     velho_isr_off dw 0
     velho_isr_seg dw 0
@@ -76,7 +79,9 @@ nova_int9:
     IN AL, 60h          ; Le o scancode
 
     CMP AL, 0E0h        ; Ignora prefixo estendido de teclas especiais (como setas)
-    JE fim_int9
+    JNE continua
+    JMP fim_int9
+    continua:
 
     ; --- JOGADOR 1 (A e D) ---
     CMP AL, 1Eh         ; Pressionou A
@@ -111,7 +116,29 @@ nova_int9:
     CMP AL, 10h         ; Pressionou Q
     JE seta_q
 
-    JMP fim_int9
+    ; --- SOCO JOGADOR 1 (T) ---
+    CMP AL, 14h         ; Make code da tecla T
+    JNE ignora_t
+    JMP seta_t
+ignora_t:
+    CMP AL, 94h         ; Break code da tecla T
+    JNE ignora_reseta_t
+    JMP reseta_t
+ignora_reseta_t:
+
+    ; --- SOCO JOGADOR 2 (M) ---
+    CMP AL, 32h         ; Make code da tecla M
+    JNE ignora_m
+    JMP seta_m
+ignora_m:
+    CMP AL, 0B2h        ; Break code da tecla M
+    JNE ignora_reseta_m
+    JMP reseta_m
+ignora_reseta_m:
+
+    JMP fim_int9        ; Pulo original para ignorar teclas não mapeadas
+
+
 
 seta_a:
     MOV byte [key_a], 1
@@ -139,6 +166,18 @@ reseta_right:
     JMP fim_int9
 seta_q:
     MOV byte [key_q], 1
+    JMP fim_int9
+seta_t:
+    MOV byte [key_t], 1
+    JMP fim_int9
+reseta_t:
+    MOV byte [key_t], 0
+    JMP fim_int9
+seta_m:
+    MOV byte [key_m], 1
+    JMP fim_int9
+reseta_m:
+    MOV byte [key_m], 0
     JMP fim_int9
 
 fim_int9:

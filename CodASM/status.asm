@@ -57,11 +57,16 @@ status_jogadores:
     ; Barra do jogador 1 (pixels 35 a 228)
     MOV WORD [baseX], 35
     MOV WORD [baseY], 80
+    MOV AX, [energia_p1]
+    MOV [energia_atual], AX
+    MOV WORD [baseX], 35
     CALL barra_de_energia
 
     ; Barra do jogador 2 (pixels 412 a 605)
     MOV WORD [baseX], 412
     MOV WORD [baseY], 80
+    MOV AX, [energia_p2]
+    MOV [energia_atual], AX
     CALL barra_de_energia
 
     POP BP
@@ -118,22 +123,30 @@ barra_de_energia:
     MOV WORD [contador], 0
 
 proximo_quadrado:
-    MOV AX, [contador]
-    CMP AX, 10
+    CMP WORD [contador], 10     ; Sempre percorre os 10 blocos
     JAE fim_barra
 
-    ; X = baseX + contador * 20
+    MOV AX, [contador]
     MOV BX, 20
     MUL BX
     ADD AX, [baseX]
     MOV [xAtual], AX
 
-    ; Coordenada vertical
     MOV AX, [baseY]
     MOV [yAtual], AX
 
-    CALL quadrado
+    ; Define cor: Verde (0Ah) se ainda tem vida, Preto (0) se já perdeu
+    MOV AX, [contador]
+    CMP AX, [energia_atual]
+    JAE s_cor_preta
+    MOV byte [cor_quadrado], 0Ah 
+    JMP s_desenha
 
+s_cor_preta:
+    MOV byte [cor_quadrado], 0
+
+s_desenha:
+    CALL quadrado
     INC WORD [contador]
     JMP proximo_quadrado
 
@@ -180,7 +193,7 @@ coluna_quadrado:
 
     ; Desenhar pixel verde
     MOV AH, 0Ch
-    MOV AL, 0Ah
+    MOV AL, [cor_quadrado]
     MOV BH, 0
     INT 10h
 
@@ -200,6 +213,12 @@ fim_quadrado:
 
 
 segment data
+
+global energia_p1, energia_p2
+energia_p1 dw 10
+energia_p2 dw 10
+energia_atual dw 10
+cor_quadrado db 0Ah
 
 ; Textos
 jogador1    db 'JOGADOR 1'
