@@ -7,6 +7,7 @@ segment code
     extern desenha_cenario
     extern desenha_lutadores
     extern apaga_lutadores
+    extern desenha_p1_normal, desenha_p2_normal
     extern desenha_soco_p1, desenha_soco_p2
     extern desenha_chute_p1, desenha_chute_p2
 
@@ -53,7 +54,7 @@ verifica_soco_p1:
     
     CALL apaga_lutadores
     CALL desenha_soco_p1
-    CALL desenha_lutadores      ; Desenha P2 normal
+    CALL desenha_p2_normal      ; Correcao: renderiza so o P2 parado
     CALL desenha_cenario
 
     CMP byte [soco_p1_travado], 1
@@ -73,12 +74,12 @@ verifica_soco_p1:
 verifica_chute_p1:
     MOV byte [soco_p1_travado], 0   
     
-    CMP byte [key_r], 1             ; CORRIGIDO: P1 chuta com R
+    CMP byte [key_r], 1             
     JNE reseta_chute_p1
     
     CALL apaga_lutadores
     CALL desenha_chute_p1
-    CALL desenha_lutadores      
+    CALL desenha_p2_normal      ; Correcao: renderiza so o P2 parado
     CALL desenha_cenario
 
     CMP byte [chute_p1_travado], 1
@@ -105,7 +106,7 @@ verifica_ataques_p2:
     JNE verifica_chute_p2
     
     CALL apaga_lutadores
-    CALL desenha_lutadores      
+    CALL desenha_p1_normal      ; Correcao: renderiza so o P1 parado
     CALL desenha_soco_p2
     CALL desenha_cenario
 
@@ -126,11 +127,11 @@ verifica_ataques_p2:
 verifica_chute_p2:
     MOV byte [soco_p2_travado], 0
     
-    CMP byte [key_n], 1             ; CORRIGIDO: P2 chuta com N
+    CMP byte [key_n], 1             
     JNE reseta_chute_p2
     
     CALL apaga_lutadores
-    CALL desenha_lutadores      
+    CALL desenha_p1_normal      ; Correcao: renderiza so o P1 parado
     CALL desenha_chute_p2
     CALL desenha_cenario
 

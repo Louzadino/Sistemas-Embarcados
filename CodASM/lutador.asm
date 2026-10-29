@@ -11,17 +11,22 @@ segment data
 
 segment code
     global desenha_lutadores, apaga_lutadores
+    global desenha_p1_normal, desenha_p2_normal
     global desenha_soco_p1, desenha_soco_p2
     global desenha_chute_p1, desenha_chute_p2
     
     extern line, circle, cor
 
 desenha_lutadores:
+    CALL desenha_p1_normal
+    CALL desenha_p2_normal
+    RET
+
+desenha_p1_normal:
     PUSH BP
     MOV BP, SP
     PUSH AX
 
-    ; --- P1 ---
     MOV byte [cor], 1
     MOV AX, [p1_x]
     PUSH AX
@@ -79,7 +84,15 @@ desenha_lutadores:
     PUSH AX
     CALL line
 
-    ; --- P2 ---
+    POP AX
+    POP BP
+    RET
+
+desenha_p2_normal:
+    PUSH BP
+    MOV BP, SP
+    PUSH AX
+
     MOV byte [cor], 4
     MOV AX, [p2_x]
     PUSH AX
@@ -136,6 +149,7 @@ desenha_lutadores:
     SUB AX, 65
     PUSH AX
     CALL line
+
     POP AX
     POP BP
     RET
