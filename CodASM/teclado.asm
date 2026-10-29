@@ -1,12 +1,11 @@
 ; =====================================================================
 ; ARQUIVO: teclado.asm
-; OBJETIVO: Tratar a interrupcao de hardware do teclado (INT 9h)
-; SEM UTILIZAR A INT 21h (Manipulacao direta da Tabela de Vetores - IVT)
 ; =====================================================================
 
 segment data
     global key_a, key_d, key_left, key_right, key_q
-    global key_t, key_m
+    global key_t, key_m, key_n, key_r
+    
     key_a       db 0
     key_d       db 0
     key_left    db 0
@@ -14,6 +13,8 @@ segment data
     key_q       db 0
     key_t       db 0
     key_m       db 0
+    key_n       db 0
+    key_r       db 0
     
     velho_isr_off dw 0
     velho_isr_seg dw 0
@@ -25,24 +26,16 @@ instala_teclado:
     PUSH AX
     PUSH BX
     PUSH ES
-
-    ; Zera ES para acessar o inicio da memoria (Tabela de Vetores de Interrupcao - IVT)
     XOR AX, AX
     MOV ES, AX
-
-    ; O vetor da INT 9h fica no endereco 0000:0024 (9 * 4 = 36 = 24h)
-    ; 1. Salvar o vetor original (Offset em 24h, Segmento em 26h)
     MOV BX, [ES:24h]
     MOV [velho_isr_off], BX
     MOV BX, [ES:26h]
     MOV [velho_isr_seg], BX
-
-    ; 2. Instalar o novo vetor
-    CLI                     ; Desabilita interrupcoes por seguranca
+    CLI
     MOV word [ES:24h], nova_int9
-    MOV word [ES:26h], CS   ; Aponta para o nosso Segmento de Codigo
-    STI                     ; Reabilita interrupcoes
-
+    MOV word [ES:26h], CS
+    STI
     POP ES
     POP BX
     POP AX
@@ -52,18 +45,14 @@ restaura_teclado:
     PUSH AX
     PUSH BX
     PUSH ES
-    
     XOR AX, AX
     MOV ES, AX
-
     CLI
-    ; Restaura o vetor original lido anteriormente (Requisito 9)
     MOV BX, [velho_isr_off]
     MOV [ES:24h], BX
     MOV BX, [velho_isr_seg]
     MOV [ES:26h], BX
     STI
-
     POP ES
     POP BX
     POP AX
@@ -72,73 +61,111 @@ restaura_teclado:
 nova_int9:
     PUSH AX
     PUSH DS
-
     MOV AX, data
     MOV DS, AX
+    IN AL, 60h
 
-    IN AL, 60h          ; Le o scancode
-
-    CMP AL, 0E0h        ; Ignora prefixo estendido de teclas especiais (como setas)
+    CMP AL, 0E0h
     JNE continua
     JMP fim_int9
-    continua:
+continua:
 
-    ; --- JOGADOR 1 (A e D) ---
-    CMP AL, 1Eh         ; Pressionou A
-    JE seta_a
-    CMP AL, 9Eh         ; Soltou A
-    JE reseta_a
-    CMP AL, 20h         ; Pressionou D
-    JE seta_d
-    CMP AL, 0A0h        ; Soltou D
-    JE reseta_d
+    ; --- MOVIMENTO P1 ---
+    CMP AL, 1Eh         ; A (Make)
+    JNE continua_reseta_a
+    JMP seta_a
+continua_reseta_a:
+    CMP AL, 9Eh         ; A (Break)
+    JNE continua_seta_d
+    JMP reseta_a
+continua_seta_d:
+    CMP AL, 20h         ; D (Make)
+    JNE continua_reseta_d
+    JMP seta_d
+continua_reseta_d:
+    CMP AL, 0A0h        ; D (Break)
+    JNE continua_seta_left
+    JMP reseta_d
 
-    ; --- JOGADOR 2 (Setas ou J e L) ---
-    CMP AL, 4Bh         ; Pressionou Seta Esquerda
-    JE seta_left
-    CMP AL, 24h         ; Pressionou J
-    JE seta_left
-    CMP AL, 0CBh        ; Soltou Seta Esquerda
-    JE reseta_left
-    CMP AL, 0A4h        ; Soltou J
-    JE reseta_left
+    ; --- MOVIMENTO P2 ---
+continua_seta_left:
+    CMP AL, 4Bh         ; Seta Esq
+    JNE continua_seta_left_j
+    JMP seta_left
+continua_seta_left_j:
+    CMP AL, 24h         ; J (Make)
+    JNE continua_reseta_left
+    JMP seta_left
+continua_reseta_left:
+    CMP AL, 0CBh        ; Seta Esq Break
+    JNE continua_reseta_left_j
+    JMP reseta_left
+continua_reseta_left_j:
+    CMP AL, 0A4h        ; J (Break)
+    JNE continua_seta_right
+    JMP reseta_left
 
-    CMP AL, 4Dh         ; Pressionou Seta Direita
-    JE seta_right
-    CMP AL, 26h         ; Pressionou L
-    JE seta_right
-    CMP AL, 0CDh        ; Soltou Seta Direita
-    JE reseta_right
-    CMP AL, 0A6h        ; Soltou L
-    JE reseta_right
+continua_seta_right:
+    CMP AL, 4Dh         ; Seta Dir
+    JNE continua_seta_right_l
+    JMP seta_right
+continua_seta_right_l:
+    CMP AL, 26h         ; L (Make)
+    JNE continua_reseta_right
+    JMP seta_right
+continua_reseta_right:
+    CMP AL, 0CDh        ; Seta Dir Break
+    JNE continua_reseta_right_l
+    JMP reseta_right
+continua_reseta_right_l:
+    CMP AL, 0A6h        ; L (Break)
+    JNE continua_seta_t
+    JMP reseta_right
 
-    ; --- SAIR DO JOGO (Q) ---
-    CMP AL, 10h         ; Pressionou Q
-    JE seta_q
-
-    ; --- SOCO JOGADOR 1 (T) ---
-    CMP AL, 14h         ; Make code da tecla T
-    JNE ignora_t
+    ; --- SOCOS ---
+continua_seta_t:
+    CMP AL, 14h         ; T (Soco P1 Make)
+    JNE continua_reseta_t
     JMP seta_t
-ignora_t:
-    CMP AL, 94h         ; Break code da tecla T
-    JNE ignora_reseta_t
+continua_reseta_t:
+    CMP AL, 94h         ; T (Soco P1 Break)
+    JNE continua_seta_m
     JMP reseta_t
-ignora_reseta_t:
-
-    ; --- SOCO JOGADOR 2 (M) ---
-    CMP AL, 32h         ; Make code da tecla M
-    JNE ignora_m
+continua_seta_m:
+    CMP AL, 32h         ; M (Soco P2 Make)
+    JNE continua_reseta_m
     JMP seta_m
-ignora_m:
-    CMP AL, 0B2h        ; Break code da tecla M
-    JNE ignora_reseta_m
+continua_reseta_m:
+    CMP AL, 0B2h        ; M (Soco P2 Break)
+    JNE continua_seta_n
     JMP reseta_m
-ignora_reseta_m:
 
-    JMP fim_int9        ; Pulo original para ignorar teclas não mapeadas
+    ; --- CHUTES ---
+continua_seta_n:
+    CMP AL, 31h         ; N (Chute P1 Make)
+    JNE continua_reseta_n
+    JMP seta_n
+continua_reseta_n:
+    CMP AL, 0B1h        ; N (Chute P1 Break)
+    JNE continua_seta_r
+    JMP reseta_n
+continua_seta_r:
+    CMP AL, 13h         ; R (Chute P2 Make)
+    JNE continua_reseta_r
+    JMP seta_r
+continua_reseta_r:
+    CMP AL, 93h         ; R (Chute P2 Break)
+    JNE continua_seta_q
+    JMP reseta_r
 
+    ; --- SAIR ---
+continua_seta_q:
+    CMP AL, 10h         ; Q (Sair)
+    JNE continua_final
+    JMP seta_q
+continua_final:
 
+    JMP fim_int9
 
 seta_a:
     MOV byte [key_a], 1
@@ -179,17 +206,27 @@ seta_m:
 reseta_m:
     MOV byte [key_m], 0
     JMP fim_int9
+seta_n:
+    MOV byte [key_n], 1
+    JMP fim_int9
+reseta_n:
+    MOV byte [key_n], 0
+    JMP fim_int9
+seta_r:
+    MOV byte [key_r], 1
+    JMP fim_int9
+reseta_r:
+    MOV byte [key_r], 0
+    JMP fim_int9
 
 fim_int9:
-    IN AL, 61h          ; Reconhece a leitura no controlador de teclado
+    IN AL, 61h
     OR AL, 80h
     OUT 61h, AL
     AND AL, 7Fh
     OUT 61h, AL
-    
-    MOV AL, 20h         ; Envia End of Interrupt (EOI) para o PIC
+    MOV AL, 20h
     OUT 20h, AL
-    
     POP DS
     POP AX
     IRET

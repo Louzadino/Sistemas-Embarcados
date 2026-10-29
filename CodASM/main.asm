@@ -1,27 +1,22 @@
-; OBJETIVO: Loop principal do Jogo de Luta e controle de video
+; =====================================================================
+; ARQUIVO: main.asm
+; =====================================================================
 
 segment code
 ..start:
     extern desenha_cenario
     extern desenha_lutadores
     extern apaga_lutadores
-    extern desenha_soco_p1
-    extern desenha_soco_p2      ; Nova funcao
+    extern desenha_soco_p1, desenha_soco_p2
+    extern desenha_chute_p1, desenha_chute_p2
 
-    ; importações do status
-    extern status_jogadores
-    extern escrever_na_tela
-    extern barra_de_energia
-    extern quadrado
+    extern status_jogadores, escrever_na_tela, barra_de_energia, quadrado
     extern energia_p1, energia_p2
 
-    ; Importacoes do teclado
-    extern instala_teclado
-    extern restaura_teclado
+    extern instala_teclado, restaura_teclado
     extern key_a, key_d, key_left, key_right, key_q
-    extern key_t, key_m
+    extern key_t, key_m, key_n, key_r
     
-    ; Variaveis dos lutadores para alteracao de coordenadas
     extern p1_x, p2_x
 
     MOV AX, data
@@ -51,67 +46,114 @@ loop_principal:
     JMP sair_jogo
 continua:
 
-verifica_ataque_p1:
+    ; ================== ATAQUES P1 ==================
+verifica_soco_p1:
     CMP byte [key_t], 1
-    JNE reseta_trava_p1
+    JNE verifica_chute_p1
     
     CALL apaga_lutadores
     CALL desenha_soco_p1
+    CALL desenha_lutadores      ; Desenha P2 normal
     CALL desenha_cenario
 
     CMP byte [soco_p1_travado], 1
-    JE verifica_ataque_p2           ; Se ja computou, pula direto pro P2
-
+    JE verifica_ataques_p2
     MOV byte [soco_p1_travado], 1 
 
-    ; Verifica Distância: P2_x - P1_x <= 45
     MOV AX, [p2_x]
     SUB AX, [p1_x]
     CMP AX, 45
-    JG verifica_ataque_p2           ; O golpe não alcançou
-
-    ; Acertou! Reduz energia se for maior que zero
+    JG verifica_ataques_p2
     CMP word [energia_p2], 0
-    JE verifica_ataque_p2
+    JE verifica_ataques_p2
     DEC word [energia_p2]
-    CALL status_jogadores           ; Atualiza a interface
-    JMP verifica_ataque_p2
+    CALL status_jogadores
+    JMP verifica_ataques_p2
 
-reseta_trava_p1:
-    MOV byte [soco_p1_travado], 0
-
-
-verifica_ataque_p2:
-    CMP byte [key_m], 1
-    JNE reseta_trava_p2
+verifica_chute_p1:
+    MOV byte [soco_p1_travado], 0   
+    
+    CMP byte [key_r], 1             ; CORRIGIDO: P1 chuta com R
+    JNE reseta_chute_p1
     
     CALL apaga_lutadores
+    CALL desenha_chute_p1
+    CALL desenha_lutadores      
+    CALL desenha_cenario
+
+    CMP byte [chute_p1_travado], 1
+    JE verifica_ataques_p2
+    MOV byte [chute_p1_travado], 1 
+
+    MOV AX, [p2_x]
+    SUB AX, [p1_x]
+    CMP AX, 45
+    JG verifica_ataques_p2
+    CMP word [energia_p2], 0
+    JE verifica_ataques_p2
+    DEC word [energia_p2]
+    CALL status_jogadores
+    JMP verifica_ataques_p2
+
+reseta_chute_p1:
+    MOV byte [chute_p1_travado], 0
+
+
+    ; ================== ATAQUES P2 ==================
+verifica_ataques_p2:
+    CMP byte [key_m], 1
+    JNE verifica_chute_p2
+    
+    CALL apaga_lutadores
+    CALL desenha_lutadores      
     CALL desenha_soco_p2
     CALL desenha_cenario
 
     CMP byte [soco_p2_travado], 1
     JE verifica_movimento
-
     MOV byte [soco_p2_travado], 1 
 
-    ; Verifica Distância para o P2: P2_x - P1_x <= 45
     MOV AX, [p2_x]
     SUB AX, [p1_x]
     CMP AX, 45
     JG verifica_movimento
-
     CMP word [energia_p1], 0
     JE verifica_movimento
     DEC word [energia_p1]
     CALL status_jogadores
     JMP verifica_movimento
 
-reseta_trava_p2:
+verifica_chute_p2:
     MOV byte [soco_p2_travado], 0
+    
+    CMP byte [key_n], 1             ; CORRIGIDO: P2 chuta com N
+    JNE reseta_chute_p2
+    
+    CALL apaga_lutadores
+    CALL desenha_lutadores      
+    CALL desenha_chute_p2
+    CALL desenha_cenario
+
+    CMP byte [chute_p2_travado], 1
+    JE verifica_movimento
+    MOV byte [chute_p2_travado], 1 
+
+    MOV AX, [p2_x]
+    SUB AX, [p1_x]
+    CMP AX, 45
+    JG verifica_movimento
+    CMP word [energia_p1], 0
+    JE verifica_movimento
+    DEC word [energia_p1]
+    CALL status_jogadores
+    JMP verifica_movimento
+
+reseta_chute_p2:
+    MOV byte [chute_p2_travado], 0
 
 
+    ; ================== MOVIMENTO ==================
 verifica_movimento:
-    ; Verifica se alguem vai se mover neste frame
     CMP byte [key_a], 1
     JE atualiza_posicoes
     CMP byte [key_d], 1
@@ -120,19 +162,17 @@ verifica_movimento:
     JE atualiza_posicoes
     CMP byte [key_right], 1
     JE atualiza_posicoes
-
     JMP loop_principal            
 
 atualiza_posicoes:
     CALL apaga_lutadores    
 
-    ; Processa Movimento do Jogador 1 
+    ; --- P1 ---
     CMP byte [key_a], 1
     JNE tenta_d
     CMP word [p1_x], 25
     JLE tenta_d
     SUB word [p1_x], 3
-
 tenta_d:
     CMP byte [key_d], 1
     JNE tenta_left
@@ -142,7 +182,7 @@ tenta_d:
     JGE tenta_left
     ADD word [p1_x], 3
 
-    ; Processa Movimento do Jogador 2 
+    ; --- P2 ---
 tenta_left:
     CMP byte [key_left], 1
     JNE tenta_right
@@ -151,7 +191,6 @@ tenta_left:
     CMP [p2_x], AX
     JLE tenta_right
     SUB word [p2_x], 3
-
 tenta_right:
     CMP byte [key_right], 1
     JNE finaliza_frame
@@ -188,7 +227,9 @@ del1:
 segment data
     modo_anterior db 0
     soco_p1_travado db 0
-    soco_p2_travado db 0    ; Nova trava do P2
+    soco_p2_travado db 0
+    chute_p1_travado db 0
+    chute_p2_travado db 0
 
 segment stack stack
     resb 512
