@@ -1,6 +1,5 @@
 ; =====================================================================
 ; ARQUIVO: main.asm
-; OBJETIVO: Loop principal do Jogo de Luta e controle de video
 ; =====================================================================
 
 segment code
@@ -8,32 +7,27 @@ segment code
     extern desenha_cenario
     extern desenha_lutadores
     extern apaga_lutadores
+    extern desenha_p1_normal, desenha_p2_normal
+    extern desenha_soco_p1, desenha_soco_p2
+    extern desenha_chute_p1, desenha_chute_p2
 
-    ; importações do status
-    extern status_jogadores
-    extern escrever_na_tela
-    extern barra_de_energia
-    extern quadrado
+    extern status_jogadores, escrever_na_tela, barra_de_energia, quadrado
+    extern energia_p1, energia_p2
 
-    ; Importacoes do teclado
-    extern instala_teclado
-    extern restaura_teclado
+    extern instala_teclado, restaura_teclado
     extern key_a, key_d, key_left, key_right, key_q
+    extern key_t, key_m, key_n, key_r
     
-    ; Variaveis dos lutadores para alteracao de coordenadas
     extern p1_x, p2_x
 
-    ; 1. Inicializacao dos registradores
     MOV AX, data
     MOV DS, AX
     MOV AX, stack
     MOV SS, AX
     MOV SP, stacktop
 
-    ; 2. Instala a nova interrupcao de teclado (INT 9h)
     CALL instala_teclado
 
-    ; 3. Inicia o modo grafico
     MOV AH, 0Fh
     INT 10h
     MOV [modo_anterior], AL
@@ -43,15 +37,124 @@ segment code
 
     CALL desenha_cenario
     CALL desenha_lutadores
-    CALL status_jogadores       ; expõe o status dos jogadores
+    CALL status_jogadores
 
 loop_principal:
     CALL delay
 
     CMP byte [key_q], 1
-    JE sair_jogo
+    JNE continua
+    JMP sair_jogo
+continua:
 
-    ; Verifica se alguem vai se mover neste frame
+    ; ================== ATAQUES P1 ==================
+verifica_soco_p1:
+    CMP byte [key_t], 1
+    JNE verifica_chute_p1
+    
+    CALL apaga_lutadores
+    CALL desenha_soco_p1
+    CALL desenha_p2_normal      ; Correcao: renderiza so o P2 parado
+    CALL desenha_cenario
+
+    CMP byte [soco_p1_travado], 1
+    JE verifica_ataques_p2
+    MOV byte [soco_p1_travado], 1 
+
+    MOV AX, [p2_x]
+    SUB AX, [p1_x]
+    CMP AX, 45
+    JG verifica_ataques_p2
+    CMP word [energia_p2], 0
+    JE verifica_ataques_p2
+    DEC word [energia_p2]
+    CALL status_jogadores
+    JMP verifica_ataques_p2
+
+verifica_chute_p1:
+    MOV byte [soco_p1_travado], 0   
+    
+    CMP byte [key_r], 1             
+    JNE reseta_chute_p1
+    
+    CALL apaga_lutadores
+    CALL desenha_chute_p1
+    CALL desenha_p2_normal      ; Correcao: renderiza so o P2 parado
+    CALL desenha_cenario
+
+    CMP byte [chute_p1_travado], 1
+    JE verifica_ataques_p2
+    MOV byte [chute_p1_travado], 1 
+
+    MOV AX, [p2_x]
+    SUB AX, [p1_x]
+    CMP AX, 45
+    JG verifica_ataques_p2
+    CMP word [energia_p2], 0
+    JE verifica_ataques_p2
+    DEC word [energia_p2]
+    CALL status_jogadores
+    JMP verifica_ataques_p2
+
+reseta_chute_p1:
+    MOV byte [chute_p1_travado], 0
+
+
+    ; ================== ATAQUES P2 ==================
+verifica_ataques_p2:
+    CMP byte [key_m], 1
+    JNE verifica_chute_p2
+    
+    CALL apaga_lutadores
+    CALL desenha_p1_normal      ; Correcao: renderiza so o P1 parado
+    CALL desenha_soco_p2
+    CALL desenha_cenario
+
+    CMP byte [soco_p2_travado], 1
+    JE verifica_movimento
+    MOV byte [soco_p2_travado], 1 
+
+    MOV AX, [p2_x]
+    SUB AX, [p1_x]
+    CMP AX, 45
+    JG verifica_movimento
+    CMP word [energia_p1], 0
+    JE verifica_movimento
+    DEC word [energia_p1]
+    CALL status_jogadores
+    JMP verifica_movimento
+
+verifica_chute_p2:
+    MOV byte [soco_p2_travado], 0
+    
+    CMP byte [key_n], 1             
+    JNE reseta_chute_p2
+    
+    CALL apaga_lutadores
+    CALL desenha_p1_normal      ; Correcao: renderiza so o P1 parado
+    CALL desenha_chute_p2
+    CALL desenha_cenario
+
+    CMP byte [chute_p2_travado], 1
+    JE verifica_movimento
+    MOV byte [chute_p2_travado], 1 
+
+    MOV AX, [p2_x]
+    SUB AX, [p1_x]
+    CMP AX, 45
+    JG verifica_movimento
+    CMP word [energia_p1], 0
+    JE verifica_movimento
+    DEC word [energia_p1]
+    CALL status_jogadores
+    JMP verifica_movimento
+
+reseta_chute_p2:
+    MOV byte [chute_p2_travado], 0
+
+
+    ; ================== MOVIMENTO ==================
+verifica_movimento:
     CMP byte [key_a], 1
     JE atualiza_posicoes
     CMP byte [key_d], 1
@@ -60,56 +163,61 @@ loop_principal:
     JE atualiza_posicoes
     CMP byte [key_right], 1
     JE atualiza_posicoes
-
-    JMP loop_principal      ; Se ninguem se moveu, apenas aguarda
+    JMP loop_principal            
 
 atualiza_posicoes:
-    CALL apaga_lutadores    ; Apaga as posicoes antigas
+    CALL apaga_lutadores    
 
-    ; Processa Jogador 1
+    ; --- P1 ---
     CMP byte [key_a], 1
     JNE tenta_d
+    CMP word [p1_x], 25
+    JLE tenta_d
     SUB word [p1_x], 3
 tenta_d:
     CMP byte [key_d], 1
     JNE tenta_left
+    MOV AX, [p2_x]
+    SUB AX, 40              
+    CMP [p1_x], AX
+    JGE tenta_left
     ADD word [p1_x], 3
 
-    ; Processa Jogador 2
+    ; --- P2 ---
 tenta_left:
     CMP byte [key_left], 1
     JNE tenta_right
+    MOV AX, [p1_x]
+    ADD AX, 40
+    CMP [p2_x], AX
+    JLE tenta_right
     SUB word [p2_x], 3
 tenta_right:
     CMP byte [key_right], 1
     JNE finaliza_frame
+    CMP word [p2_x], 614
+    JGE finaliza_frame
     ADD word [p2_x], 3
 
 finaliza_frame:
-    CALL desenha_lutadores  ; Desenha nas novas coordenadas
-    CALL desenha_cenario    ; Restaura as linhas brancas da arena sobrescritas 
-    JMP loop_principal
+    CALL desenha_lutadores  
+    CALL desenha_cenario    
+    JMP loop_principal      
 
 sair_jogo:
-    ; Restaura o video e o teclado (Requisito 9)
     MOV AH, 0   
     MOV AL, [modo_anterior] 
     INT 10h
-    
     CALL restaura_teclado
-
     MOV AX, 4C00h
     INT 21h
 
-; =====================================================================
-; FUNCAO DE DELAY (Ajuste o valor de CX se ficar rapido/lento demais)
-; =====================================================================
 delay:
     PUSH CX
-    MOV CX, 0100h       ; Multiplicador externo (ajuste a velocidade aqui)
+    MOV CX, 0100h       
 del2:
     PUSH CX
-    MOV CX, 0800h       ; Loop interno
+    MOV CX, 0800h       
 del1:
     LOOP del1
     POP CX
@@ -119,6 +227,10 @@ del1:
 
 segment data
     modo_anterior db 0
+    soco_p1_travado db 0
+    soco_p2_travado db 0
+    chute_p1_travado db 0
+    chute_p2_travado db 0
 
 segment stack stack
     resb 512
