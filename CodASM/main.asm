@@ -9,6 +9,7 @@ segment code
     extern apaga_lutadores
     extern desenha_p1_normal, desenha_p2_normal
     extern desenha_p1_agachado, desenha_p2_agachado
+    extern desenha_p1_andando, desenha_p2_andando
     extern desenha_soco_p1, desenha_soco_p2
     extern desenha_chute_p1, desenha_chute_p2
 
@@ -330,7 +331,20 @@ finaliza_frame:
 render_p1:
     CMP byte [p1_estado], 1
     JE r_agachado_p1
+    CMP word [p1_y], 115
+    JG r_normal_p1      ; Força normal no ar
+    CMP byte [key_a], 1
+    JE r_check_passo_p1
+    CMP byte [key_d], 1
+    JE r_check_passo_p1
+r_normal_p1:
     CALL desenha_p1_normal
+    RET
+r_check_passo_p1:
+    MOV AX, [p1_x]
+    TEST AX, 0010h      ; Alterna a pose a cada 16 pixels baseando no X
+    JZ r_normal_p1
+    CALL desenha_p1_andando
     RET
 r_agachado_p1:
     CALL desenha_p1_agachado
@@ -339,12 +353,24 @@ r_agachado_p1:
 render_p2:
     CMP byte [p2_estado], 1
     JE r_agachado_p2
+    CMP word [p2_y], 115
+    JG r_normal_p2      ; Força normal no ar
+    CMP byte [key_left], 1
+    JE r_check_passo_p2
+    CMP byte [key_right], 1
+    JE r_check_passo_p2
+r_normal_p2:
     CALL desenha_p2_normal
+    RET
+r_check_passo_p2:
+    MOV AX, [p2_x]
+    TEST AX, 0010h      ; Alterna a pose a cada 16 pixels baseando no X
+    JZ r_normal_p2
+    CALL desenha_p2_andando
     RET
 r_agachado_p2:
     CALL desenha_p2_agachado
     RET
-
 
 sair_jogo:
     MOV AH, 0   
