@@ -12,6 +12,7 @@ segment data
 segment code
     global desenha_lutadores, apaga_lutadores
     global desenha_p1_normal, desenha_p2_normal
+    global desenha_p1_agachado, desenha_p2_agachado
     global desenha_soco_p1, desenha_soco_p2
     global desenha_chute_p1, desenha_chute_p2
     
@@ -22,11 +23,11 @@ desenha_lutadores:
     CALL desenha_p2_normal
     RET
 
+; ================== POSES NORMAIS ==================
 desenha_p1_normal:
     PUSH BP
     MOV BP, SP
     PUSH AX
-
     MOV byte [cor], 1
     MOV AX, [p1_x]
     PUSH AX
@@ -83,7 +84,6 @@ desenha_p1_normal:
     SUB AX, 65
     PUSH AX
     CALL line
-
     POP AX
     POP BP
     RET
@@ -92,7 +92,6 @@ desenha_p2_normal:
     PUSH BP
     MOV BP, SP
     PUSH AX
-
     MOV byte [cor], 4
     MOV AX, [p2_x]
     PUSH AX
@@ -149,11 +148,142 @@ desenha_p2_normal:
     SUB AX, 65
     PUSH AX
     CALL line
-
     POP AX
     POP BP
     RET
 
+; ================== POSES AGACHADAS ==================
+desenha_p1_agachado:
+    PUSH BP
+    MOV BP, SP
+    PUSH AX
+    MOV byte [cor], 1
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, 10
+    PUSH AX
+    CALL circle
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 35
+    PUSH AX
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 40
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 20
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 40
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p1_x]
+    SUB AX, 20
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 20
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+    POP AX
+    POP BP
+    RET
+
+desenha_p2_agachado:
+    PUSH BP
+    MOV BP, SP
+    PUSH AX
+    MOV byte [cor], 4
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, 10
+    PUSH AX
+    CALL circle
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 35
+    PUSH AX
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 40
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 20
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 40
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 20
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p2_x]
+    ADD AX, 20
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+    POP AX
+    POP BP
+    RET
+
+; ================== LIMPEZA GERAL ==================
 apaga_lutadores:
     PUSH BP
     MOV BP, SP
@@ -172,15 +302,22 @@ apaga_lutadores:
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
+    SUB AX, 25      
+    PUSH AX
+    MOV AX, 10
+    PUSH AX
+    CALL circle
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
     SUB AX, 10
     PUSH AX
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
-    SUB AX, 35
+    SUB AX, 50      
     PUSH AX
     CALL line
-    ; Limpa braco (40px)
     MOV AX, [p1_x]
     SUB AX, 10
     PUSH AX
@@ -188,20 +325,32 @@ apaga_lutadores:
     SUB AX, 15
     PUSH AX
     MOV AX, [p1_x]
-    ADD AX, 40
+    ADD AX, 40      
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 15
     PUSH AX
     CALL line
-    ; Limpa pernas normais
+    MOV AX, [p1_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 40
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 20      
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 40
+    PUSH AX
+    CALL line
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 35
     PUSH AX
     MOV AX, [p1_x]
-    SUB AX, 15
+    SUB AX, 15      
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 65
@@ -213,20 +362,43 @@ apaga_lutadores:
     SUB AX, 35
     PUSH AX
     MOV AX, [p1_x]
-    ADD AX, 15
+    ADD AX, 15      
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Limpa area do chute
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50      
+    PUSH AX
+    MOV AX, [p1_x]
+    SUB AX, 20      
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50      
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 20      
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 35
     PUSH AX
     MOV AX, [p1_x]
-    ADD AX, 40
+    ADD AX, 40      
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 35
@@ -244,15 +416,22 @@ apaga_lutadores:
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
+    SUB AX, 25      
+    PUSH AX
+    MOV AX, 10
+    PUSH AX
+    CALL circle
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
     SUB AX, 10
     PUSH AX
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
-    SUB AX, 35
+    SUB AX, 50      
     PUSH AX
     CALL line
-    ; Limpa braco (40px)
     MOV AX, [p2_x]
     ADD AX, 10
     PUSH AX
@@ -260,20 +439,32 @@ apaga_lutadores:
     SUB AX, 15
     PUSH AX
     MOV AX, [p2_x]
-    SUB AX, 40
+    SUB AX, 40      
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 15
     PUSH AX
     CALL line
-    ; Limpa pernas normais
+    MOV AX, [p2_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 40
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 20      
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 40
+    PUSH AX
+    CALL line
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 35
     PUSH AX
     MOV AX, [p2_x]
-    SUB AX, 15
+    SUB AX, 15      
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 65
@@ -285,20 +476,43 @@ apaga_lutadores:
     SUB AX, 35
     PUSH AX
     MOV AX, [p2_x]
-    ADD AX, 15
+    ADD AX, 15      
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Limpa area do chute
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50      
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 20      
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50      
+    PUSH AX
+    MOV AX, [p2_x]
+    ADD AX, 20      
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 65
+    PUSH AX
+    CALL line
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 35
     PUSH AX
     MOV AX, [p2_x]
-    SUB AX, 40
+    SUB AX, 40      
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 35
@@ -310,7 +524,6 @@ apaga_lutadores:
     RET
 
 ; ================== ROTINAS DE SOCO ==================
-
 desenha_soco_p1:
     PUSH BP
     MOV BP, SP
@@ -334,7 +547,6 @@ desenha_soco_p1:
     SUB AX, 35
     PUSH AX
     CALL line
-    ; Braco Esticado
     MOV AX, [p1_x]
     SUB AX, 10
     PUSH AX
@@ -399,7 +611,6 @@ desenha_soco_p2:
     SUB AX, 35
     PUSH AX
     CALL line
-    ; Braco Esticado
     MOV AX, [p2_x]
     ADD AX, 10
     PUSH AX
@@ -442,7 +653,6 @@ desenha_soco_p2:
     RET
 
 ; ================== ROTINAS DE CHUTE ==================
-
 desenha_chute_p1:
     PUSH BP
     MOV BP, SP
@@ -466,7 +676,6 @@ desenha_chute_p1:
     SUB AX, 35
     PUSH AX
     CALL line
-    ; Braco Normal
     MOV AX, [p1_x]
     SUB AX, 10
     PUSH AX
@@ -480,7 +689,6 @@ desenha_chute_p1:
     SUB AX, 15
     PUSH AX
     CALL line
-    ; Perna de Apoio
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -493,7 +701,6 @@ desenha_chute_p1:
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Perna Esticada (Chute a frente na altura da cintura)
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -533,7 +740,6 @@ desenha_chute_p2:
     SUB AX, 35
     PUSH AX
     CALL line
-    ; Braco Normal
     MOV AX, [p2_x]
     ADD AX, 10
     PUSH AX
@@ -547,7 +753,6 @@ desenha_chute_p2:
     SUB AX, 15
     PUSH AX
     CALL line
-    ; Perna de Apoio
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
@@ -560,7 +765,6 @@ desenha_chute_p2:
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Perna Esticada (Chute a frente)
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
