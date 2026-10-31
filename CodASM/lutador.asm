@@ -48,19 +48,61 @@ desenha_p1_normal:
     SUB AX, 35
     PUSH AX
     CALL line
+    
+    ; Braço Trás (Guarda em V)
     MOV AX, [p1_x]
-    SUB AX, 10
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25      ; Cotovelo baixo
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 5       ; Mão alta
+    PUSH AX
+    CALL line
+
+    ; Braço Frente (Guarda em V)
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
     PUSH AX
     MOV AX, [p1_x]
     ADD AX, 20
     PUSH AX
     MOV AX, [p1_y]
-    SUB AX, 15
+    SUB AX, 5
     PUSH AX
     CALL line
+
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -112,19 +154,61 @@ desenha_p2_normal:
     SUB AX, 35
     PUSH AX
     CALL line
+    
+    ; Braço Trás P2 (Guarda em V)
     MOV AX, [p2_x]
-    ADD AX, 10
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25      ; Cotovelo baixo
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 5       ; Mão alta
+    PUSH AX
+    CALL line
+
+    ; Braço Frente P2 (Guarda em V)
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
     PUSH AX
     MOV AX, [p2_x]
     SUB AX, 20
     PUSH AX
     MOV AX, [p2_y]
-    SUB AX, 15
+    SUB AX, 5
     PUSH AX
     CALL line
+
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
@@ -177,20 +261,62 @@ desenha_p1_andando:
     SUB AX, 35
     PUSH AX
     CALL line
+    
+    ; Braço Trás (Guarda em V)
     MOV AX, [p1_x]
-    SUB AX, 10
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+
+    ; Braço Frente (Guarda em V)
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
     PUSH AX
     MOV AX, [p1_x]
     ADD AX, 20
     PUSH AX
     MOV AX, [p1_y]
-    SUB AX, 15
+    SUB AX, 5
     PUSH AX
     CALL line
-    ; Pernas mais fechadas (passo)
+    
+    ; Pernas passo
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -242,20 +368,62 @@ desenha_p2_andando:
     SUB AX, 35
     PUSH AX
     CALL line
+    
+    ; Braço Trás P2 (Guarda em V)
     MOV AX, [p2_x]
-    ADD AX, 10
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+
+    ; Braço Frente P2 (Guarda em V)
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
     PUSH AX
     MOV AX, [p2_x]
     SUB AX, 20
     PUSH AX
     MOV AX, [p2_y]
-    SUB AX, 15
+    SUB AX, 5
     PUSH AX
     CALL line
-    ; Pernas mais fechadas (passo)
+    
+    ; Pernas passo
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
@@ -309,19 +477,61 @@ desenha_p1_agachado:
     SUB AX, 50
     PUSH AX
     CALL line
+    
+    ; Braço Trás Agachado P1
     MOV AX, [p1_x]
-    SUB AX, 10
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 40
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50      ; Cotovelo baixo
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 30      ; Mão alta
+    PUSH AX
+    CALL line
+
+    ; Braço Frente Agachado P1
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 40
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50
     PUSH AX
     MOV AX, [p1_x]
     ADD AX, 20
     PUSH AX
     MOV AX, [p1_y]
-    SUB AX, 40
+    SUB AX, 30
     PUSH AX
     CALL line
+
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -374,19 +584,61 @@ desenha_p2_agachado:
     SUB AX, 50
     PUSH AX
     CALL line
+    
+    ; Braço Trás Agachado P2
     MOV AX, [p2_x]
-    ADD AX, 10
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 40
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50      ; Cotovelo baixo
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 30      ; Mão alta
+    PUSH AX
+    CALL line
+
+    ; Braço Frente Agachado P2
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 40
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50
     PUSH AX
     MOV AX, [p2_x]
     SUB AX, 20
     PUSH AX
     MOV AX, [p2_y]
-    SUB AX, 40
+    SUB AX, 30
     PUSH AX
     CALL line
+
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
@@ -450,33 +702,130 @@ apaga_lutadores:
     SUB AX, 50      
     PUSH AX
     CALL line
+    
+    ; Apaga Braço Trás Normal V
     MOV AX, [p1_x]
-    SUB AX, 10
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 15
     PUSH AX
     MOV AX, [p1_x]
-    ADD AX, 40      
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+
+    ; Apaga Braço Frente Normal V
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 20
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+    
+    ; Apaga Soco P1
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 40
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 15
     PUSH AX
     CALL line
+
+    ; Apaga Braço Trás Agachado V
     MOV AX, [p1_x]
-    SUB AX, 10
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 40
     PUSH AX
     MOV AX, [p1_x]
-    ADD AX, 20      
+    ADD AX, 5
     PUSH AX
     MOV AX, [p1_y]
-    SUB AX, 40
+    SUB AX, 50
     PUSH AX
     CALL line
-    ; Pernas normais
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 30
+    PUSH AX
+    CALL line
+
+    ; Apaga Braço Frente Agachado V
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 40
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 20
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 30
+    PUSH AX
+    CALL line
+
+    ; Pernas normais e passo e agachado P1
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -501,7 +850,6 @@ apaga_lutadores:
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Pernas passo
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -526,7 +874,6 @@ apaga_lutadores:
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Pernas agachado
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -551,7 +898,6 @@ apaga_lutadores:
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Chute
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -592,33 +938,130 @@ apaga_lutadores:
     SUB AX, 50      
     PUSH AX
     CALL line
+    
+    ; Apaga Braço Trás Normal V P2
     MOV AX, [p2_x]
-    ADD AX, 10
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 15
     PUSH AX
     MOV AX, [p2_x]
-    SUB AX, 40      
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+
+    ; Apaga Braço Frente Normal V P2
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 20
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+    
+    ; Apaga Soco P2
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 40
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 15
     PUSH AX
     CALL line
+
+    ; Apaga Braço Trás Agachado V P2
     MOV AX, [p2_x]
-    ADD AX, 10
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 40
     PUSH AX
     MOV AX, [p2_x]
-    SUB AX, 20      
+    SUB AX, 5
     PUSH AX
     MOV AX, [p2_y]
-    SUB AX, 40
+    SUB AX, 50
     PUSH AX
     CALL line
-    ; Pernas normais
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 30
+    PUSH AX
+    CALL line
+
+    ; Apaga Braço Frente Agachado V P2
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 40
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 50
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 20
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 30
+    PUSH AX
+    CALL line
+
+    ; Pernas normais e passo e agachado P2
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
@@ -643,7 +1086,6 @@ apaga_lutadores:
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Pernas passo
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
@@ -668,7 +1110,6 @@ apaga_lutadores:
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Pernas agachado
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
@@ -693,7 +1134,6 @@ apaga_lutadores:
     SUB AX, 65
     PUSH AX
     CALL line
-    ; Chute
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
@@ -735,8 +1175,36 @@ desenha_soco_p1:
     SUB AX, 35
     PUSH AX
     CALL line
+    
+    ; Braço Trás (Guarda em V)
     MOV AX, [p1_x]
-    SUB AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+    
+    ; Braço Frente (Soco Esticado)
+    MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 15
@@ -748,6 +1216,7 @@ desenha_soco_p1:
     SUB AX, 15
     PUSH AX
     CALL line
+    
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -799,8 +1268,36 @@ desenha_soco_p2:
     SUB AX, 35
     PUSH AX
     CALL line
+    
+    ; Braço Trás P2 (Guarda em V)
     MOV AX, [p2_x]
-    ADD AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+    
+    ; Braço Frente P2 (Soco Esticado)
+    MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 15
@@ -812,6 +1309,7 @@ desenha_soco_p2:
     SUB AX, 15
     PUSH AX
     CALL line
+    
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
@@ -864,19 +1362,61 @@ desenha_chute_p1:
     SUB AX, 35
     PUSH AX
     CALL line
+    
+    ; Braço Trás (Guarda em V)
     MOV AX, [p1_x]
-    SUB AX, 10
     PUSH AX
     MOV AX, [p1_y]
     SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 5
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+
+    ; Braço Frente (Guarda em V)
+    MOV AX, [p1_x]
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p1_x]
+    ADD AX, 10
+    PUSH AX
+    MOV AX, [p1_y]
+    SUB AX, 25
     PUSH AX
     MOV AX, [p1_x]
     ADD AX, 20
     PUSH AX
     MOV AX, [p1_y]
-    SUB AX, 15
+    SUB AX, 5
     PUSH AX
     CALL line
+
     MOV AX, [p1_x]
     PUSH AX
     MOV AX, [p1_y]
@@ -928,19 +1468,61 @@ desenha_chute_p2:
     SUB AX, 35
     PUSH AX
     CALL line
+    
+    ; Braço Trás P2 (Guarda em V)
     MOV AX, [p2_x]
-    ADD AX, 10
     PUSH AX
     MOV AX, [p2_y]
     SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 5
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 5
+    PUSH AX
+    CALL line
+
+    ; Braço Frente P2 (Guarda em V)
+    MOV AX, [p2_x]
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 15
+    PUSH AX
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
+    PUSH AX
+    CALL line
+    MOV AX, [p2_x]
+    SUB AX, 10
+    PUSH AX
+    MOV AX, [p2_y]
+    SUB AX, 25
     PUSH AX
     MOV AX, [p2_x]
     SUB AX, 20
     PUSH AX
     MOV AX, [p2_y]
-    SUB AX, 15
+    SUB AX, 5
     PUSH AX
     CALL line
+
     MOV AX, [p2_x]
     PUSH AX
     MOV AX, [p2_y]
