@@ -8,6 +8,7 @@ segment code
     extern desenha_lutadores
     extern apaga_lutadores
     extern desenha_p1_normal, desenha_p2_normal
+    extern desenha_p1_agachado, desenha_p2_agachado
     extern desenha_soco_p1, desenha_soco_p2
     extern desenha_chute_p1, desenha_chute_p2
 
@@ -17,8 +18,9 @@ segment code
     extern instala_teclado, restaura_teclado
     extern key_a, key_d, key_left, key_right, key_q
     extern key_t, key_m, key_n, key_r
+    extern key_w, key_s, key_up, key_down
     
-    extern p1_x, p2_x
+    extern p1_x, p2_x, p1_y, p2_y
 
     MOV AX, data
     MOV DS, AX
@@ -36,7 +38,8 @@ segment code
     INT 10h
 
     CALL desenha_cenario
-    CALL desenha_lutadores
+    CALL render_p1
+    CALL render_p2
     CALL status_jogadores
 
 loop_principal:
@@ -54,17 +57,28 @@ verifica_soco_p1:
     
     CALL apaga_lutadores
     CALL desenha_soco_p1
-    CALL desenha_p2_normal      ; Correcao: renderiza so o P2 parado
+    CALL render_p2      
     CALL desenha_cenario
 
     CMP byte [soco_p1_travado], 1
-    JE verifica_ataques_p2
+    JNE continua2
+    JMP verifica_ataques_p2
+
+continua2:
     MOV byte [soco_p1_travado], 1 
 
     MOV AX, [p2_x]
     SUB AX, [p1_x]
     CMP AX, 45
     JG verifica_ataques_p2
+    
+    ; Esquiva 1: Se P2 pulou
+    CMP word [p2_y], 115
+    JG verifica_ataques_p2
+    ; Esquiva 2: Se P2 abaixou
+    CMP byte [p2_estado], 1
+    JE verifica_ataques_p2
+
     CMP word [energia_p2], 0
     JE verifica_ataques_p2
     DEC word [energia_p2]
@@ -73,13 +87,12 @@ verifica_soco_p1:
 
 verifica_chute_p1:
     MOV byte [soco_p1_travado], 0   
-    
     CMP byte [key_r], 1             
     JNE reseta_chute_p1
     
     CALL apaga_lutadores
     CALL desenha_chute_p1
-    CALL desenha_p2_normal      ; Correcao: renderiza so o P2 parado
+    CALL render_p2      
     CALL desenha_cenario
 
     CMP byte [chute_p1_travado], 1
@@ -90,6 +103,11 @@ verifica_chute_p1:
     SUB AX, [p1_x]
     CMP AX, 45
     JG verifica_ataques_p2
+    
+    ; Esquiva 1: Se P2 pulou (chute rasteiro passa vazio)
+    CMP word [p2_y], 115
+    JG verifica_ataques_p2
+
     CMP word [energia_p2], 0
     JE verifica_ataques_p2
     DEC word [energia_p2]
@@ -106,18 +124,28 @@ verifica_ataques_p2:
     JNE verifica_chute_p2
     
     CALL apaga_lutadores
-    CALL desenha_p1_normal      ; Correcao: renderiza so o P1 parado
+    CALL render_p1      
     CALL desenha_soco_p2
     CALL desenha_cenario
 
     CMP byte [soco_p2_travado], 1
-    JE verifica_movimento
+    JNE continua3
+    JMP verifica_movimento
+
+continua3:
     MOV byte [soco_p2_travado], 1 
 
     MOV AX, [p2_x]
     SUB AX, [p1_x]
     CMP AX, 45
     JG verifica_movimento
+
+    ; Esquivas do P1
+    CMP word [p1_y], 115
+    JG verifica_movimento
+    CMP byte [p1_estado], 1
+    JE verifica_movimento
+
     CMP word [energia_p1], 0
     JE verifica_movimento
     DEC word [energia_p1]
@@ -126,12 +154,11 @@ verifica_ataques_p2:
 
 verifica_chute_p2:
     MOV byte [soco_p2_travado], 0
-    
     CMP byte [key_n], 1             
     JNE reseta_chute_p2
     
     CALL apaga_lutadores
-    CALL desenha_p1_normal      ; Correcao: renderiza so o P1 parado
+    CALL render_p1      
     CALL desenha_chute_p2
     CALL desenha_cenario
 
@@ -143,6 +170,11 @@ verifica_chute_p2:
     SUB AX, [p1_x]
     CMP AX, 45
     JG verifica_movimento
+    
+    ; Esquiva do P1
+    CMP word [p1_y], 115
+    JG verifica_movimento
+
     CMP word [energia_p1], 0
     JE verifica_movimento
     DEC word [energia_p1]
@@ -153,8 +185,16 @@ reseta_chute_p2:
     MOV byte [chute_p2_travado], 0
 
 
-    ; ================== MOVIMENTO ==================
+    ; ================== GATILHO DE MOVIMENTO ==================
 verifica_movimento:
+    ; Forca a atualizacao se a tecla de abaixar mudar em relacao ao frame passado
+    MOV AL, [key_s]
+    CMP AL, [p1_estado]
+    JNE atualiza_posicoes
+    MOV AL, [key_down]
+    CMP AL, [p2_estado]
+    JNE atualiza_posicoes
+
     CMP byte [key_a], 1
     JE atualiza_posicoes
     CMP byte [key_d], 1
@@ -163,12 +203,64 @@ verifica_movimento:
     JE atualiza_posicoes
     CMP byte [key_right], 1
     JE atualiza_posicoes
+    CMP byte [key_w], 1
+    JE atualiza_posicoes
+    CMP byte [key_up], 1
+    JE atualiza_posicoes
+    CMP word [p1_y], 115
+    JG atualiza_posicoes
+    CMP word [p2_y], 115
+    JG atualiza_posicoes
+
     JMP loop_principal            
 
 atualiza_posicoes:
     CALL apaga_lutadores    
 
-    ; --- P1 ---
+    ; --- ESTADOS DE AGACHAR ---
+    MOV byte [p1_estado], 0
+    CMP word [p1_y], 115
+    JG check_p2_crouch      ; Nao pode abaixar no ar
+    CMP byte [key_s], 1
+    JNE check_p2_crouch
+    MOV byte [p1_estado], 1
+check_p2_crouch:
+    MOV byte [p2_estado], 0
+    CMP word [p2_y], 115
+    JG fisica_pulo_p1
+    CMP byte [key_down], 1
+    JNE fisica_pulo_p1
+    MOV byte [p2_estado], 1
+
+
+    ; --- FISICA DE PULO P1 ---
+fisica_pulo_p1:
+    CMP word [p1_y], 115
+    JG aplica_gravidade_p1
+    
+    CMP byte [p1_estado], 1
+    JE processa_x_p1        ; Nao pula se agachado
+    
+    CMP byte [key_w], 1
+    JNE processa_x_p1       
+    MOV word [p1_vy], 24    
+    JMP aplica_gravidade_p1
+
+aplica_gravidade_p1:
+    MOV AX, [p1_vy]
+    ADD word [p1_y], AX     
+    SUB word [p1_vy], 4     
+
+    CMP word [p1_y], 115
+    JG processa_x_p1
+    MOV word [p1_y], 115    
+    MOV word [p1_vy], 0     
+
+processa_x_p1:
+    ; --- MOVIMENTO X P1 ---
+    CMP byte [p1_estado], 1
+    JE fisica_pulo_p2       ; Nao anda se agachado
+
     CMP byte [key_a], 1
     JNE tenta_d
     CMP word [p1_x], 25
@@ -176,15 +268,41 @@ atualiza_posicoes:
     SUB word [p1_x], 3
 tenta_d:
     CMP byte [key_d], 1
-    JNE tenta_left
+    JNE fisica_pulo_p2
     MOV AX, [p2_x]
     SUB AX, 40              
     CMP [p1_x], AX
-    JGE tenta_left
+    JGE fisica_pulo_p2
     ADD word [p1_x], 3
 
-    ; --- P2 ---
-tenta_left:
+fisica_pulo_p2:
+    ; --- FISICA DE PULO P2 ---
+    CMP word [p2_y], 115
+    JG aplica_gravidade_p2
+    
+    CMP byte [p2_estado], 1
+    JE processa_x_p2
+    
+    CMP byte [key_up], 1
+    JNE processa_x_p2
+    MOV word [p2_vy], 24
+    JMP aplica_gravidade_p2
+
+aplica_gravidade_p2:
+    MOV AX, [p2_vy]
+    ADD word [p2_y], AX
+    SUB word [p2_vy], 4
+
+    CMP word [p2_y], 115
+    JG processa_x_p2
+    MOV word [p2_y], 115
+    MOV word [p2_vy], 0
+
+processa_x_p2:
+    ; --- MOVIMENTO X P2 ---
+    CMP byte [p2_estado], 1
+    JE finaliza_frame       ; Nao anda se agachado
+
     CMP byte [key_left], 1
     JNE tenta_right
     MOV AX, [p1_x]
@@ -200,9 +318,33 @@ tenta_right:
     ADD word [p2_x], 3
 
 finaliza_frame:
-    CALL desenha_lutadores  
+    CALL render_p1
+    CALL render_p2
     CALL desenha_cenario    
     JMP loop_principal      
+
+
+; ==================================================
+; FUNCOES ROTEADORAS DE RENDERIZACAO
+; ==================================================
+render_p1:
+    CMP byte [p1_estado], 1
+    JE r_agachado_p1
+    CALL desenha_p1_normal
+    RET
+r_agachado_p1:
+    CALL desenha_p1_agachado
+    RET
+
+render_p2:
+    CMP byte [p2_estado], 1
+    JE r_agachado_p2
+    CALL desenha_p2_normal
+    RET
+r_agachado_p2:
+    CALL desenha_p2_agachado
+    RET
+
 
 sair_jogo:
     MOV AH, 0   
@@ -231,6 +373,10 @@ segment data
     soco_p2_travado db 0
     chute_p1_travado db 0
     chute_p2_travado db 0
+    p1_vy dw 0          
+    p2_vy dw 0          
+    p1_estado db 0      ; 0 = Em pe, 1 = Agachado
+    p2_estado db 0      ; 0 = Em pe, 1 = Agachado
 
 segment stack stack
     resb 512

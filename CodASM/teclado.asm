@@ -5,6 +5,7 @@
 segment data
     global key_a, key_d, key_left, key_right, key_q
     global key_t, key_m, key_n, key_r
+    global key_w, key_s, key_up, key_down
     
     key_a       db 0
     key_d       db 0
@@ -15,6 +16,10 @@ segment data
     key_m       db 0
     key_n       db 0
     key_r       db 0
+    key_w       db 0
+    key_s       db 0
+    key_up      db 0
+    key_down    db 0
     
     velho_isr_off dw 0
     velho_isr_seg dw 0
@@ -161,62 +166,138 @@ continua_reseta_r:
     ; --- SAIR ---
 continua_seta_q:
     CMP AL, 10h         ; Q (Sair)
-    JNE continua_final
+    JNE continua_seta_w
     JMP seta_q
-continua_final:
 
+    ; --- PULOS E DEFESAS P1 ---
+continua_seta_w:
+    CMP AL, 11h         ; W (Make)
+    JNE continua_reseta_w
+    JMP seta_w
+continua_reseta_w:
+    CMP AL, 91h         ; W (Break)
+    JNE continua_seta_s
+    JMP reseta_w
+continua_seta_s:
+    CMP AL, 1Fh         ; S (Make)
+    JNE continua_reseta_s
+    JMP seta_s
+continua_reseta_s:
+    CMP AL, 9Fh         ; S (Break)
+    JNE continua_seta_up
+    JMP reseta_s
+
+    ; --- PULOS E DEFESAS P2 ---
+continua_seta_up:
+    CMP AL, 48h         ; UP
+    JNE continua_seta_up_i
+    JMP seta_up
+continua_seta_up_i:
+    CMP AL, 17h         ; I (Backup UP)
+    JNE continua_reseta_up
+    JMP seta_up
+continua_reseta_up:
+    CMP AL, 0C8h        ; UP Break
+    JNE continua_reseta_up_i
+    JMP reseta_up
+continua_reseta_up_i:
+    CMP AL, 97h         ; I Break
+    JNE continua_seta_down
+    JMP reseta_up
+continua_seta_down:
+    CMP AL, 50h         ; DOWN
+    JNE continua_seta_down_k
+    JMP seta_down
+continua_seta_down_k:
+    CMP AL, 25h         ; K (Backup DOWN)
+    JNE continua_reseta_down
+    JMP seta_down
+continua_reseta_down:
+    CMP AL, 0D0h        ; DOWN Break
+    JNE continua_reseta_down_k
+    JMP reseta_down
+continua_reseta_down_k:
+    CMP AL, 0A5h        ; K Break
+    JNE continua_final
+    JMP reseta_down
+
+continua_final:
     JMP fim_int9
 
-seta_a:
+seta_a:     
     MOV byte [key_a], 1
     JMP fim_int9
-reseta_a:
+reseta_a:     
     MOV byte [key_a], 0
     JMP fim_int9
-seta_d:
+seta_d:       
     MOV byte [key_d], 1
     JMP fim_int9
-reseta_d:
+reseta_d:     
     MOV byte [key_d], 0
     JMP fim_int9
-seta_left:
+seta_left:    
     MOV byte [key_left], 1
     JMP fim_int9
-reseta_left:
+reseta_left:  
     MOV byte [key_left], 0
     JMP fim_int9
-seta_right:
+seta_right:   
     MOV byte [key_right], 1
     JMP fim_int9
-reseta_right:
+reseta_right: 
     MOV byte [key_right], 0
     JMP fim_int9
-seta_q:
+seta_q:       
     MOV byte [key_q], 1
     JMP fim_int9
-seta_t:
+seta_t:       
     MOV byte [key_t], 1
     JMP fim_int9
-reseta_t:
+reseta_t:     
     MOV byte [key_t], 0
     JMP fim_int9
-seta_m:
+seta_m:       
     MOV byte [key_m], 1
     JMP fim_int9
-reseta_m:
+reseta_m:     
     MOV byte [key_m], 0
     JMP fim_int9
-seta_n:
+seta_n:       
     MOV byte [key_n], 1
     JMP fim_int9
-reseta_n:
+reseta_n:     
     MOV byte [key_n], 0
     JMP fim_int9
-seta_r:
+seta_r:       
     MOV byte [key_r], 1
     JMP fim_int9
-reseta_r:
+reseta_r:     
     MOV byte [key_r], 0
+    JMP fim_int9
+seta_w:       
+    MOV byte [key_w], 1
+    JMP fim_int9
+reseta_w:     
+    MOV byte [key_w], 0
+    JMP fim_int9
+seta_s:       
+    MOV byte [key_s], 1
+    JMP fim_int9
+reseta_s:     
+    MOV byte [key_s], 0
+    JMP fim_int9
+seta_up:      
+    MOV byte [key_up], 1
+    JMP fim_int9
+reseta_up:    
+    MOV byte [key_up], 0
+    JMP fim_int9
+seta_down:    
+    MOV byte [key_down], 1
+    JMP fim_int9
+reseta_down:  
+    MOV byte [key_down], 0
     JMP fim_int9
 
 fim_int9:
