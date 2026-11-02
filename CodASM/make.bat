@@ -4,4 +4,6 @@ call nasm cenario
 call nasm lutador
 call nasm linec
 call nasm status
-call freelink main teclado cenario lutador linec status
+call nasm colisoes
+call nasm fisica
+call freelink main teclado cenario lutador linec status colisoes fisica
