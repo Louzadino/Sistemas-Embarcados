@@ -1,21 +1,24 @@
-; OBJETIVO: Desenhar a arena de luta, limites e HUD
+; RESUMO: Módulo responsável por desenhar a arena de luta gráfica, 
+; estabelecendo os limites superior (teto), inferior (chão), esquerdo 
+; e direito para conter a movimentação dos lutadores.
 
 segment code
-    global desenha_cenario      ; Torna a funcao visivel para o main.asm
+    global desenha_cenario      ; Torna a função visível para o main.asm
     
-    extern line                 ; Importa a funcao de desenhar reta do linec.asm
-    extern cor                  ; Importa a variavel global de cor do linec.asm
+    extern line                 ; Importa a função de desenhar reta de outro módulo
+    extern cor                  ; Importa a variável global de controle de cor
 
 desenha_cenario:
-    ; Salva o contexto na pilha (boa pratica para nao corromper registradores)
+    ; Salva o contexto na pilha para preservar os registradores originais
     PUSH BP
     MOV BP, SP
     PUSH AX
 
-    ; Define a cor dos delimitadores como branco intenso (15)
+    ; Define a cor dos delimitadores da arena como branco intenso (15)
     MOV byte [cor], 15
 
-    ; 1. Desenhar o Chao (Y=50, indo de X=0 ate X=639)
+    ; 1. DESENHAR O CHÃO (Linha horizontal inferior)
+    ; Coordenadas: X de 0 até 639, Y fixo em 50
     MOV AX, 0
     PUSH AX
     MOV AX, 50
@@ -26,7 +29,8 @@ desenha_cenario:
     PUSH AX
     CALL line
 
-    ; 2. Desenhar o Teto (Y=400, indo de X=0 ate X=639)
+    ; 2. DESENHAR O TETO / DELIMITADOR SUPERIOR (Linha horizontal superior)
+    ; Coordenadas: X de 0 até 639, Y fixo em 300
     MOV AX, 0
     PUSH AX
     MOV AX, 300
@@ -37,7 +41,8 @@ desenha_cenario:
     PUSH AX
     CALL line
 
-    ; 3. Desenhar Limite Esquerdo (X=5, indo de Y=50 ate Y=400)
+    ; 3. DESENHAR O LIMITE ESQUERDO (Linha vertical)
+    ; Coordenadas: X fixo em 5, Y de 50 até 300
     MOV AX, 5
     PUSH AX
     MOV AX, 50
@@ -48,7 +53,8 @@ desenha_cenario:
     PUSH AX
     CALL line
 
-    ; 4. Desenhar Limite Direito (X=634, indo de Y=50 ate Y=400)
+    ; 4. DESENHAR O LIMITE DIREITO (Linha vertical)
+    ; Coordenadas: X fixo em 634, Y de 50 até 300
     MOV AX, 634
     PUSH AX
     MOV AX, 50
@@ -59,7 +65,7 @@ desenha_cenario:
     PUSH AX
     CALL line
 
-    ; Restaura o contexto e retorna
+    ; Restaura o contexto da pilha e retorna para a função chamadora
     POP AX
     POP BP
     RET
