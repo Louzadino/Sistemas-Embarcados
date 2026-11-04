@@ -27,141 +27,148 @@
     27                                      ; Importação da função de menu inicial (seleção de cores dos lutadores)
     28                                      extern MENU_INICIAL, cor_p1, cor_p2, cor
     29                                  
-    30                                      ; INICIALIZAÇÃO DO SISTEMA E VÍDEO
-    31 00000000 B8[0000]                    MOV AX, data
-    32 00000003 8ED8                        MOV DS, AX
-    33 00000005 B8[0000]                    MOV AX, stack
-    34 00000008 8ED0                        MOV SS, AX
-    35 0000000A BC[0002]                    MOV SP, stacktop
-    36                                  
-    37                                      ; Instala a nova interrupção de teclado (INT 9h)
-    38 0000000D E8(0000)                    CALL instala_teclado
+    30                                      ; Importação da função timer
+    31                                      extern timer
+    32                                  
+    33                                      ; INICIALIZAÇÃO DO SISTEMA E VÍDEO
+    34 00000000 B8[0000]                    MOV AX, data
+    35 00000003 8ED8                        MOV DS, AX
+    36 00000005 B8[0000]                    MOV AX, stack
+    37 00000008 8ED0                        MOV SS, AX
+    38 0000000A BC[0002]                    MOV SP, stacktop
     39                                  
-    40                                      ; Salva o modo de vídeo atual e configura o modo gráfico 640x480 (16h / 12h)
-    41 00000010 B40F                        MOV AH, 0Fh
-    42 00000012 CD10                        INT 10h
-    43 00000014 A2[0000]                    MOV [modo_anterior], AL
-    44 00000017 B012                        MOV AL, 12h
-    45 00000019 B400                        MOV AH, 0
-    46 0000001B CD10                        INT 10h
-    47                                  
-    48                                      ; EXECUTA O MENU INTERATIVO DE SELEÇÃO DE CORES
-    49                                      ; (Fica retido aqui até os dois jogadores escolherem as cores e apertarem ENTER)  
+    40                                      ; Instala a nova interrupção de teclado (INT 9h)
+    41 0000000D E8(0000)                    CALL instala_teclado
+    42                                  
+    43                                      ; Salva o modo de vídeo atual e configura o modo gráfico 640x480 (16h / 12h)
+    44 00000010 B40F                        MOV AH, 0Fh
+    45 00000012 CD10                        INT 10h
+    46 00000014 A2[0000]                    MOV [modo_anterior], AL
+    47 00000017 B012                        MOV AL, 12h
+    48 00000019 B400                        MOV AH, 0
+    49 0000001B CD10                        INT 10h
     50                                  
-    51 0000001D E8(0000)                    CALL MENU_INICIAL
-    52                                  
-    53                                      ; Já presente nas suas funções de desenho do P1:
-    54 00000020 A0[0000]                    MOV AL, [cor_p1]
-    55 00000023 A2[0000]                    MOV byte [cor], AL
-    56                                  
-    57                                      ; Já presente nas suas funções de desenho do P2:
-    58 00000026 A0[0000]                    MOV AL, [cor_p2]
-    59 00000029 A2[0000]                    MOV byte [cor], AL
-    60                                  
-    61                                      ; Inicia o cenário e renderiza os lutadores já com as cores escolhidas em 'cor_p1' e 'cor_p2'
-    62 0000002C E8(0000)                    CALL desenha_cenario
-    63 0000002F E82800                      CALL render_p1
-    64 00000032 E85600                      CALL render_p2
-    65 00000035 E8(0000)                    CALL status_jogadores
-    66                                  
-    67                                      ; LAÇO PRINCIPAL DO JOGO (GAME LOOP)
-    68                                  loop_principal:
-    69 00000038 E89000                      CALL delay
-    70                                  
-    71                                      ; --- Correção do pulo de saída ---
-    72 0000003B 803E[0000]01                CMP byte [key_q], 1
-    73 00000040 7503                        JNE continua_game_loop
-    74 00000042 E97700                      JMP sair_jogo
-    75                                  
-    76                                  continua_game_loop:
-    77                                      ; 1. Processa colisões e ataques
-    78 00000045 E8(0000)                    CALL verifica_ataques
-    79                                      
-    80                                      ; 2. Apaga rastro e atualiza física
-    81 00000048 E8(0000)                    CALL apaga_lutadores
-    82 0000004B E8(0000)                    CALL atualiza_movimento
-    83                                  
-    84                                      ; 3. Renderiza o quadro atual
-    85 0000004E E80900                      CALL render_p1
-    86 00000051 E83700                      CALL render_p2
-    87 00000054 E8(0000)                    CALL desenha_cenario    
-    88                                      
-    89 00000057 E9DEFF                      JMP loop_principal
-    90                                  ; FUNÇÕES DE RENDERIZAÇÃO
-    91                                  ; Decidem qual sprite do lutador desenhar com base 
-    92                                  ; na física (se está pulando, agachando ou andando)
-    93                                  global render_p1, render_p2
-    94                                  
-    95                                  render_p1:
-    96 0000005A 803E[0000]01                CMP byte [p1_estado], 1      ; Verifica se o P1 está agachado
-    97 0000005F 7426                        JE r_agachado_p1
-    98 00000061 813E[0000]7300              CMP word [p1_y], 115         ; Verifica se o P1 está no ar (pulando)
-    99 00000067 7F0E                        JG r_normal_p1      
-   100 00000069 803E[0000]01                CMP byte [key_a], 1          ; Verifica se está andando para esquerda
-   101 0000006E 740B                        JE r_check_passo_p1
-   102 00000070 803E[0000]01                CMP byte [key_d], 1          ; Verifica se está andando para direita
-   103 00000075 7404                        JE r_check_passo_p1
-   104                                  r_normal_p1:
-   105 00000077 E8(0000)                    CALL desenha_p1_normal       ; Desenha pose padrão em pé
-   106 0000007A C3                          RET
-   107                                  r_check_passo_p1:
-   108 0000007B A1[0000]                    MOV AX, [p1_x]
-   109 0000007E A91000                      TEST AX, 0010h               ; Alterna o sprite de passo baseando nos bits da posição X
-   110 00000081 74F4                        JZ r_normal_p1
-   111 00000083 E8(0000)                    CALL desenha_p1_andando      ; Desenha pose andando
-   112 00000086 C3                          RET
-   113                                  r_agachado_p1:
-   114 00000087 E8(0000)                    CALL desenha_p1_agachado     ; Desenha pose agachada
-   115 0000008A C3                          RET
-   116                                  
-   117                                  render_p2:
-   118 0000008B 803E[0000]01                CMP byte [p2_estado], 1      ; Verifica se o P2 está agachado
-   119 00000090 7426                        JE r_agachado_p2
-   120 00000092 813E[0000]7300              CMP word [p2_y], 115         ; Verifica se o P2 está no ar
-   121 00000098 7F0E                        JG r_normal_p2      
-   122 0000009A 803E[0000]01                CMP byte [key_left], 1       ; Verifica se está andando para esquerda
-   123 0000009F 740B                        JE r_check_passo_p2
-   124 000000A1 803E[0000]01                CMP byte [key_right], 1      ; Verifica se está andando para direita
-   125 000000A6 7404                        JE r_check_passo_p2
-   126                                  r_normal_p2:
-   127 000000A8 E8(0000)                    CALL desenha_p2_normal       ; Desenha pose padrão em pé
-   128 000000AB C3                          RET
-   129                                  r_check_passo_p2:
-   130 000000AC A1[0000]                    MOV AX, [p2_x]
-   131 000000AF A91000                      TEST AX, 0010h               ; Alterna sprite de passo do P2
-   132 000000B2 74F4                        JZ r_normal_p2
-   133 000000B4 E8(0000)                    CALL desenha_p2_andando      ; Desenha pose andando
-   134 000000B7 C3                          RET
-   135                                  r_agachado_p2:
-   136 000000B8 E8(0000)                    CALL desenha_p2_agachado     ; Desenha pose agachada
-   137 000000BB C3                          RET
-   138                                  
-   139                                  ; ROTINA DE ENCERRAMENTO E RESTAURAÇÃO DO SISTEMA
-   140                                  sair_jogo:
-   141 000000BC B400                        MOV AH, 0   
-   142 000000BE A0[0000]                    MOV AL, [modo_anterior]      ; Restaura o modo de vídeo original do DOS
-   143 000000C1 CD10                        INT 10h
-   144 000000C3 E8(0000)                    CALL restaura_teclado        ; Restaura a interrupção original do teclado
-   145 000000C6 B8004C                      MOV AX, 4C00h                ; Encerra o programa com segurança
-   146 000000C9 CD21                        INT 21h
-   147                                  
-   148                                  ; ROTINA DE DELAY (ATRASO POR SOFTWARE)
-   149                                  delay:
-   150 000000CB 51                          PUSH CX
-   151 000000CC B90001                      MOV CX, 0100h       
-   152                                  del2:
-   153 000000CF 51                          PUSH CX
-   154 000000D0 B90008                      MOV CX, 0800h       
-   155                                  del1:
-   156 000000D3 E2FE                        LOOP del1
-   157 000000D5 59                          POP CX
-   158 000000D6 E2F7                        LOOP del2
-   159 000000D8 59                          POP CX
-   160 000000D9 C3                          RET
-   161                                  
-   162                                  segment data
-   163 00000000 00                          modo_anterior db 0           ; Armazena o modo de vídeo anterior
-   164                                  
-   165                                  segment stack stack
-   166 00000000 <res 00000200>              resb 512
-   167                                  stacktop:
+    51                                      ; EXECUTA O MENU INTERATIVO DE SELEÇÃO DE CORES
+    52                                      ; (Fica retido aqui até os dois jogadores escolherem as cores e apertarem ENTER)  
+    53                                  
+    54 0000001D E8(0000)                    CALL MENU_INICIAL
+    55                                  
+    56                                      ; Já presente nas suas funções de desenho do P1:
+    57 00000020 A0[0000]                    MOV AL, [cor_p1]
+    58 00000023 A2[0000]                    MOV byte [cor], AL
+    59                                  
+    60                                      ; Já presente nas suas funções de desenho do P2:
+    61 00000026 A0[0000]                    MOV AL, [cor_p2]
+    62 00000029 A2[0000]                    MOV byte [cor], AL
+    63                                  
+    64                                      ; Inicia o cenário e renderiza os lutadores já com as cores escolhidas em 'cor_p1' e 'cor_p2'
+    65 0000002C E8(0000)                    CALL desenha_cenario
+    66 0000002F E82E00                      CALL render_p1
+    67 00000032 E85C00                      CALL render_p2
+    68 00000035 E8(0000)                    CALL status_jogadores
+    69                                  
+    70                                      ; LAÇO PRINCIPAL DO JOGO (GAME LOOP)
+    71                                  loop_principal:
+    72 00000038 E89600                      CALL delay
+    73                                  
+    74                                      ; --- Correção do pulo de saída ---
+    75 0000003B 803E[0000]01                CMP byte [key_q], 1
+    76 00000040 7503                        JNE continua_game_loop
+    77 00000042 E97D00                      JMP sair_jogo
+    78                                  
+    79                                  continua_game_loop:
+    80                                      ; 1. Processa colisões e ataques
+    81 00000045 E8(0000)                    CALL verifica_ataques
+    82                                      
+    83                                      ; 2. Apaga rastro e atualiza física
+    84 00000048 E8(0000)                    CALL apaga_lutadores
+    85 0000004B E8(0000)                    CALL atualiza_movimento
+    86                                  
+    87                                      ; 3. Renderiza o quadro atual
+    88 0000004E E80F00                      CALL render_p1
+    89 00000051 E83D00                      CALL render_p2
+    90 00000054 E8(0000)                    CALL desenha_cenario 
+    91                                      
+    92 00000057 E8(0000)                    CALL timer
+    93 0000005A 3D0100                      CMP AX, 1
+    94                                      ;JE tempo_acabou            ; Se AX = 1 (retorno da função timer), encerra a partida    
+    95 0000005D E9D8FF                      JMP loop_principal
+    96                                  
+    97                                  ; FUNÇÕES DE RENDERIZAÇÃO
+    98                                  ; Decidem qual sprite do lutador desenhar com base 
+    99                                  ; na física (se está pulando, agachando ou andando)
+   100                                  global render_p1, render_p2
+   101                                  
+   102                                  render_p1:
+   103 00000060 803E[0000]01                CMP byte [p1_estado], 1      ; Verifica se o P1 está agachado
+   104 00000065 7426                        JE r_agachado_p1
+   105 00000067 813E[0000]7300              CMP word [p1_y], 115         ; Verifica se o P1 está no ar (pulando)
+   106 0000006D 7F0E                        JG r_normal_p1      
+   107 0000006F 803E[0000]01                CMP byte [key_a], 1          ; Verifica se está andando para esquerda
+   108 00000074 740B                        JE r_check_passo_p1
+   109 00000076 803E[0000]01                CMP byte [key_d], 1          ; Verifica se está andando para direita
+   110 0000007B 7404                        JE r_check_passo_p1
+   111                                  r_normal_p1:
+   112 0000007D E8(0000)                    CALL desenha_p1_normal       ; Desenha pose padrão em pé
+   113 00000080 C3                          RET
+   114                                  r_check_passo_p1:
+   115 00000081 A1[0000]                    MOV AX, [p1_x]
+   116 00000084 A91000                      TEST AX, 0010h               ; Alterna o sprite de passo baseando nos bits da posição X
+   117 00000087 74F4                        JZ r_normal_p1
+   118 00000089 E8(0000)                    CALL desenha_p1_andando      ; Desenha pose andando
+   119 0000008C C3                          RET
+   120                                  r_agachado_p1:
+   121 0000008D E8(0000)                    CALL desenha_p1_agachado     ; Desenha pose agachada
+   122 00000090 C3                          RET
+   123                                  
+   124                                  render_p2:
+   125 00000091 803E[0000]01                CMP byte [p2_estado], 1      ; Verifica se o P2 está agachado
+   126 00000096 7426                        JE r_agachado_p2
+   127 00000098 813E[0000]7300              CMP word [p2_y], 115         ; Verifica se o P2 está no ar
+   128 0000009E 7F0E                        JG r_normal_p2      
+   129 000000A0 803E[0000]01                CMP byte [key_left], 1       ; Verifica se está andando para esquerda
+   130 000000A5 740B                        JE r_check_passo_p2
+   131 000000A7 803E[0000]01                CMP byte [key_right], 1      ; Verifica se está andando para direita
+   132 000000AC 7404                        JE r_check_passo_p2
+   133                                  r_normal_p2:
+   134 000000AE E8(0000)                    CALL desenha_p2_normal       ; Desenha pose padrão em pé
+   135 000000B1 C3                          RET
+   136                                  r_check_passo_p2:
+   137 000000B2 A1[0000]                    MOV AX, [p2_x]
+   138 000000B5 A91000                      TEST AX, 0010h               ; Alterna sprite de passo do P2
+   139 000000B8 74F4                        JZ r_normal_p2
+   140 000000BA E8(0000)                    CALL desenha_p2_andando      ; Desenha pose andando
+   141 000000BD C3                          RET
+   142                                  r_agachado_p2:
+   143 000000BE E8(0000)                    CALL desenha_p2_agachado     ; Desenha pose agachada
+   144 000000C1 C3                          RET
+   145                                  
+   146                                  ; ROTINA DE ENCERRAMENTO E RESTAURAÇÃO DO SISTEMA
+   147                                  sair_jogo:
+   148 000000C2 B400                        MOV AH, 0   
+   149 000000C4 A0[0000]                    MOV AL, [modo_anterior]      ; Restaura o modo de vídeo original do DOS
+   150 000000C7 CD10                        INT 10h
+   151 000000C9 E8(0000)                    CALL restaura_teclado        ; Restaura a interrupção original do teclado
+   152 000000CC B8004C                      MOV AX, 4C00h                ; Encerra o programa com segurança
+   153 000000CF CD21                        INT 21h
+   154                                  
+   155                                  ; ROTINA DE DELAY (ATRASO POR SOFTWARE)
+   156                                  delay:
+   157 000000D1 51                          PUSH CX
+   158 000000D2 B90001                      MOV CX, 0100h       
+   159                                  del2:
+   160 000000D5 51                          PUSH CX
+   161 000000D6 B90008                      MOV CX, 0800h       
+   162                                  del1:
+   163 000000D9 E2FE                        LOOP del1
+   164 000000DB 59                          POP CX
+   165 000000DC E2F7                        LOOP del2
+   166 000000DE 59                          POP CX
+   167 000000DF C3                          RET
+   168                                  
+   169                                  segment data
+   170 00000000 00                          modo_anterior db 0           ; Armazena o modo de vídeo anterior
+   171                                  
+   172                                  segment stack stack
+   173 00000000 <res 00000200>              resb 512
+   174                                  stacktop:

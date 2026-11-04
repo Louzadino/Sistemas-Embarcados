@@ -27,6 +27,9 @@ segment code
     ; Importação da função de menu inicial (seleção de cores dos lutadores)
     extern MENU_INICIAL, cor_p1, cor_p2, cor
 
+    ; Importação da função timer
+    extern timer
+
     ; INICIALIZAÇÃO DO SISTEMA E VÍDEO
     MOV AX, data
     MOV DS, AX
@@ -84,9 +87,13 @@ continua_game_loop:
     ; 3. Renderiza o quadro atual
     CALL render_p1
     CALL render_p2
-    CALL desenha_cenario    
+    CALL desenha_cenario 
     
+    CALL timer
+    CMP AX, 1
+    ;JE tempo_acabou            ; Se AX = 1 (retorno da função timer), encerra a partida    
     JMP loop_principal
+
 ; FUNÇÕES DE RENDERIZAÇÃO
 ; Decidem qual sprite do lutador desenhar com base 
 ; na física (se está pulando, agachando ou andando)

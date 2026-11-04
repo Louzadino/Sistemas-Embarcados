@@ -1,241 +1,239 @@
-     1                                  ; RESUMO: Módulo responsável pela interface de texto e HUD (Heads-Up Display)
-     2                                  ; do jogo. Gerencia a exibição dos nomes dos lutadores ("JOGADOR 1", "VS", 
-     3                                  ; "JOGADOR 2") e desenha as barras de energia em tempo real com base nos 
-     4                                  ; pontos de vida atuais de cada jogador, utilizando primitivas de pixels 
-     5                                  ; e interrupções de vídeo da BIOS.
-     6                                  
-     7                                  segment code
-     8                                  
-     9                                  ; Exportar todas as funções do módulo
-    10                                  global status_jogadores
-    11                                  global escrever_na_tela
-    12                                  global barra_de_energia
-    13                                  global quadrado
-    14                                  
-    15                                  ; Exportar variáveis globais de texto e controle de coordenadas/desenho
-    16                                  global jogador1
-    17                                  global jogador2
-    18                                  global versus
-    19                                  global baseX
-    20                                  global baseY
-    21                                  global xAtual
-    22                                  global yAtual
-    23                                  global contador
-    24                                  global linhaPixel
-    25                                  global colunaPixel
-    26                                  
-    27                                  ; FUNÇÃO: STATUS_JOGADORES
-    28                                  ; Desenha os nomes, o marcador "VS" e atualiza as barras 
-    29                                  ; de energia de ambos os jogadores na tela.
-    30                                  status_jogadores:
-    31 00000000 50                          PUSH AX
-    32 00000001 53                          PUSH BX
-    33 00000002 51                          PUSH CX
-    34 00000003 52                          PUSH DX
-    35 00000004 55                          PUSH BP
-    36                                  
-    37                                      ; Escreve o nome do Jogador 1 
-    38 00000005 BD[0700]                    MOV BP, jogador1
-    39 00000008 B90900                      MOV CX, 9               ; Quantidade de caracteres da string
-    40 0000000B B603                        MOV DH, 3               ; Linha 3 da tela de texto
-    41 0000000D B20C                        MOV DL, 12              ; Coluna 12 (equivalente ao pixel 96)
-    42 0000000F B30A                        MOV BL, 0Ah             ; Atributo de cor (verde claro)
-    43 00000011 E85400                      CALL escrever_na_tela
-    44                                  
-    45                                      ; Escreve o marcador "VS" no centro da tela 
-    46 00000014 BD[1000]                    MOV BP, versus
-    47 00000017 B90200                      MOV CX, 2               ; 2 caracteres
-    48 0000001A B603                        MOV DH, 3               ; Mesma linha dos nomes
-    49 0000001C B227                        MOV DL, 39              ; Coluna 39 (centro da tela / pixel 312)
-    50 0000001E B30C                        MOV BL, 0Ch             ; Atributo de cor (vermelho claro)
-    51 00000020 E84500                      CALL escrever_na_tela
-    52                                  
-    53                                      ; Escreve o nome do Jogador 2 
-    54 00000023 BD[1200]                    MOV BP, jogador2
-    55 00000026 B90900                      MOV CX, 9
-    56 00000029 B603                        MOV DH, 3               ; Mesma linha
-    57 0000002B B23B                        MOV DL, 59              ; Coluna 59 (equivalente ao pixel 472)
-    58 0000002D B30A                        MOV BL, 0Ah             ; Verde claro
-    59 0000002F E83600                      CALL escrever_na_tela
-    60                                  
-    61                                      ; Renderiza a barra de energia do Jogador 1 
-    62 00000032 C706[1B00]2300              MOV WORD [baseX], 35    ; Posição horizontal inicial da barra 1
-    63 00000038 C706[1D00]5000              MOV WORD [baseY], 80    ; Posição vertical da barra
-    64 0000003E A1[0000]                    MOV AX, [energia_p1]
-    65 00000041 A3[0400]                    MOV [energia_atual], AX
-    66 00000044 C706[1B00]2300              MOV WORD [baseX], 35
-    67 0000004A E83400                      CALL barra_de_energia
-    68                                  
-    69                                      ; Renderiza a barra de energia do Jogador 2 
-    70 0000004D C706[1B00]9C01              MOV WORD [baseX], 412   ; Posição horizontal inicial da barra 2
-    71 00000053 C706[1D00]5000              MOV WORD [baseY], 80    ; Posição vertical da barra
-    72 00000059 A1[0200]                    MOV AX, [energia_p2]
-    73 0000005C A3[0400]                    MOV [energia_atual], AX
-    74 0000005F E81F00                      CALL barra_de_energia
-    75                                  
-    76 00000062 5D                          POP BP
-    77 00000063 5A                          POP DX
-    78 00000064 59                          POP CX
-    79 00000065 5B                          POP BX
-    80 00000066 58                          POP AX
-    81 00000067 C3                          RET
-    82                                  
-    83                                  
-    84                                  ; FUNÇÃO: ESCREVER_NA_TELA
-    85                                  ; Utiliza a interrupção de vídeo da BIOS para escrever strings formatadas.
-    86                                  ; Entrada (via registradores):
-    87                                  ;   BP = Endereço da string na memória
-    88                                  ;   CX = Quantidade de caracteres
-    89                                  ;   DH = Linha
-    90                                  ;   DL = Coluna
-    91                                  ;   BL = Atributo/Cor do texto
-    92                                  escrever_na_tela:
-    93 00000068 50                          PUSH AX
-    94 00000069 53                          PUSH BX
-    95 0000006A 51                          PUSH CX
-    96 0000006B 52                          PUSH DX
-    97 0000006C 55                          PUSH BP
-    98 0000006D 06                          PUSH ES
+     1                                  
+     2                                  segment code
+     3                                  
+     4                                  ; Exportar todas as funcoes
+     5                                  global status_jogadores
+     6                                  global escrever_na_tela
+     7                                  global barra_de_energia
+     8                                  global quadrado
+     9                                  
+    10                                  ; Exportar todas as variaveis
+    11                                  global jogador1
+    12                                  global jogador2
+    13                                  global versus
+    14                                  global baseX
+    15                                  global baseY
+    16                                  global xAtual
+    17                                  global yAtual
+    18                                  global contador
+    19                                  global linhaPixel
+    20                                  global colunaPixel
+    21                                  
+    22                                  ; ==================================================
+    23                                  ; FUNCAO: STATUS_JOGADORES
+    24                                  ; Desenha os nomes, o VS e as barras de energia
+    25                                  ; ==================================================
+    26                                  status_jogadores:
+    27 00000000 50                          PUSH AX
+    28 00000001 53                          PUSH BX
+    29 00000002 51                          PUSH CX
+    30 00000003 52                          PUSH DX
+    31 00000004 55                          PUSH BP
+    32                                  
+    33                                      ; Nome do jogador 1 (centralizado sobre a barra 1)
+    34 00000005 BD[0700]                    MOV BP, jogador1
+    35 00000008 B90900                      MOV CX, 9
+    36 0000000B B603                        MOV DH, 3               ; linha 3
+    37 0000000D B20C                        MOV DL, 12              ; coluna 12 = pixel 96
+    38 0000000F B30A                        MOV BL, 0Ah
+    39 00000011 E85400                      CALL escrever_na_tela
+    40                                  
+    41                                      ; VS (centro da tela)
+    42 00000014 BD[1000]                    MOV BP, versus
+    43 00000017 B90200                      MOV CX, 2
+    44 0000001A B603                        MOV DH, 3               ; mesma linha dos nomes
+    45 0000001C B227                        MOV DL, 39              ; coluna 39 = pixel 312
+    46 0000001E B30C                        MOV BL, 0Ch
+    47 00000020 E84500                      CALL escrever_na_tela
+    48                                  
+    49                                      ; Nome do jogador 2 (centralizado sobre a barra 2)
+    50 00000023 BD[1200]                    MOV BP, jogador2
+    51 00000026 B90900                      MOV CX, 9
+    52 00000029 B603                        MOV DH, 3               ; mesma linha
+    53 0000002B B23B                        MOV DL, 59              ; coluna 59 = pixel 472
+    54 0000002D B30A                        MOV BL, 0Ah
+    55 0000002F E83600                      CALL escrever_na_tela
+    56                                  
+    57                                      ; Barra do jogador 1 (pixels 35 a 228)
+    58 00000032 C706[1B00]2300              MOV WORD [baseX], 35
+    59 00000038 C706[1D00]5000              MOV WORD [baseY], 80
+    60 0000003E A1[0000]                    MOV AX, [energia_p1]
+    61 00000041 A3[0400]                    MOV [energia_atual], AX
+    62 00000044 C706[1B00]2300              MOV WORD [baseX], 35
+    63 0000004A E83400                      CALL barra_de_energia
+    64                                  
+    65                                      ; Barra do jogador 2 (pixels 412 a 605)
+    66 0000004D C706[1B00]9C01              MOV WORD [baseX], 412
+    67 00000053 C706[1D00]5000              MOV WORD [baseY], 80
+    68 00000059 A1[0200]                    MOV AX, [energia_p2]
+    69 0000005C A3[0400]                    MOV [energia_atual], AX
+    70 0000005F E81F00                      CALL barra_de_energia
+    71                                  
+    72 00000062 5D                          POP BP
+    73 00000063 5A                          POP DX
+    74 00000064 59                          POP CX
+    75 00000065 5B                          POP BX
+    76 00000066 58                          POP AX
+    77 00000067 C3                          RET
+    78                                  
+    79                                  
+    80                                  ; ==================================================
+    81                                  ; FUNCAO: ESCREVER_NA_TELA
+    82                                  ; Entrada:
+    83                                  ;   BP = endereco do texto
+    84                                  ;   CX = quantidade de caracteres
+    85                                  ;   DH = linha
+    86                                  ;   DL = coluna
+    87                                  ;   BL = cor
+    88                                  ; ==================================================
+    89                                  escrever_na_tela:
+    90 00000068 50                          PUSH AX
+    91 00000069 53                          PUSH BX
+    92 0000006A 51                          PUSH CX
+    93 0000006B 52                          PUSH DX
+    94 0000006C 55                          PUSH BP
+    95 0000006D 06                          PUSH ES
+    96                                  
+    97 0000006E 8CD8                        MOV AX, DS
+    98 00000070 8EC0                        MOV ES, AX              ; ES:BP aponta para o texto
     99                                  
-   100 0000006E 8CD8                        MOV AX, DS
-   101 00000070 8EC0                        MOV ES, AX              ; ES:BP aponta corretamente para o texto no segmento de dados
-   102                                  
-   103 00000072 B413                        MOV AH, 13h             ; Função da BIOS para escrever string
-   104 00000074 B001                        MOV AL, 01h             ; Modo de escrita (atualiza cursor e usa atributo de BL)
-   105 00000076 B700                        MOV BH, 00h             ; Página de vídeo 0
-   106 00000078 CD10                        INT 10h                 ; Chama a interrupção gráfica/texto da BIOS
-   107                                  
-   108 0000007A 07                          POP ES
-   109 0000007B 5D                          POP BP
-   110 0000007C 5A                          POP DX
-   111 0000007D 59                          POP CX
-   112 0000007E 5B                          POP BX
-   113 0000007F 58                          POP AX
-   114 00000080 C3                          RET
-   115                                  
-   116                                  
-   117                                  ; FUNÇÃO: BARRA_DE_ENERGIA
-   118                                  ; Desenha dez blocos (quadrados) alinhados horizontalmente 
-   119                                  ; representando a vida restante do lutador.
-   120                                  barra_de_energia:
-   121 00000081 50                          PUSH AX
-   122 00000082 53                          PUSH BX
-   123 00000083 52                          PUSH DX                 ; A instrução MUL altera o registrador DX
+   100 00000072 B413                        MOV AH, 13h
+   101 00000074 B001                        MOV AL, 01h
+   102 00000076 B700                        MOV BH, 00h
+   103 00000078 CD10                        INT 10h
+   104                                  
+   105 0000007A 07                          POP ES
+   106 0000007B 5D                          POP BP
+   107 0000007C 5A                          POP DX
+   108 0000007D 59                          POP CX
+   109 0000007E 5B                          POP BX
+   110 0000007F 58                          POP AX
+   111 00000080 C3                          RET
+   112                                  
+   113                                  
+   114                                  ; ==================================================
+   115                                  ; FUNCAO: BARRA_DE_ENERGIA
+   116                                  ; Desenha dez quadrados alinhados horizontalmente
+   117                                  ; ==================================================
+   118                                  barra_de_energia:
+   119 00000081 50                          PUSH AX
+   120 00000082 53                          PUSH BX
+   121 00000083 52                          PUSH DX                 ; MUL BX altera DX
+   122                                  
+   123 00000084 C706[2300]0000              MOV WORD [contador], 0
    124                                  
-   125 00000084 C706[2300]0000              MOV WORD [contador], 0  ; Inicia o contador do bloco 0 ao 9
-   126                                  
-   127                                  proximo_quadrado:
-   128 0000008A 813E[2300]0A00              CMP WORD [contador], 10     ; Verifica se já desenhou os 10 blocos da barra
-   129 00000090 7335                        JAE fim_barra
-   130                                  
-   131                                      ; Calcula a posição X do quadrado atual (baseX + contador * 20 pixels de espaçamento)
-   132 00000092 A1[2300]                    MOV AX, [contador]
-   133 00000095 BB1400                      MOV BX, 20
-   134 00000098 F7E3                        MUL BX
-   135 0000009A 0306[1B00]                  ADD AX, [baseX]
-   136 0000009E A3[1F00]                    MOV [xAtual], AX
+   125                                  proximo_quadrado:
+   126 0000008A 813E[2300]0A00              CMP WORD [contador], 10     ; Sempre percorre os 10 blocos
+   127 00000090 7335                        JAE fim_barra
+   128                                  
+   129 00000092 A1[2300]                    MOV AX, [contador]
+   130 00000095 BB1400                      MOV BX, 20
+   131 00000098 F7E3                        MUL BX
+   132 0000009A 0306[1B00]                  ADD AX, [baseX]
+   133 0000009E A3[1F00]                    MOV [xAtual], AX
+   134                                  
+   135 000000A1 A1[1D00]                    MOV AX, [baseY]
+   136 000000A4 A3[2100]                    MOV [yAtual], AX
    137                                  
-   138 000000A1 A1[1D00]                    MOV AX, [baseY]
-   139 000000A4 A3[2100]                    MOV [yAtual], AX
-   140                                  
-   141                                      ; Define a cor do bloco: Verde (0Ah) se ainda tem vida, Preto (0) se já perdeu
-   142 000000A7 A1[2300]                    MOV AX, [contador]
-   143 000000AA 3B06[0400]                  CMP AX, [energia_atual]
-   144 000000AE 7308                        JAE s_cor_preta
-   145 000000B0 C606[0600]0A                MOV byte [cor_quadrado], 0Ah 
-   146 000000B5 E90500                      JMP s_desenha
+   138                                      ; Define cor: Verde (0Ah) se ainda tem vida, Preto (0) se já perdeu
+   139 000000A7 A1[2300]                    MOV AX, [contador]
+   140 000000AA 3B06[0400]                  CMP AX, [energia_atual]
+   141 000000AE 7308                        JAE s_cor_preta
+   142 000000B0 C606[0600]0A                MOV byte [cor_quadrado], 0Ah 
+   143 000000B5 E90500                      JMP s_desenha
+   144                                  
+   145                                  s_cor_preta:
+   146 000000B8 C606[0600]00                MOV byte [cor_quadrado], 0
    147                                  
-   148                                  s_cor_preta:
-   149 000000B8 C606[0600]00                MOV byte [cor_quadrado], 0      ; Bloco apagado (vazio)
-   150                                  
-   151                                  s_desenha:
-   152 000000BD E80B00                      CALL quadrado                   ; Desenha o quadrado individual na tela
-   153 000000C0 FF06[2300]                  INC WORD [contador]
-   154 000000C4 E9C3FF                      JMP proximo_quadrado
-   155                                  
-   156                                  fim_barra:
-   157 000000C7 5A                          POP DX
-   158 000000C8 5B                          POP BX
-   159 000000C9 58                          POP AX
-   160 000000CA C3                          RET
-   161                                  
-   162                                  
-   163                                  ; FUNÇÃO: QUADRADO
-   164                                  ; Desenha um bloco sólido de 13 x 13 pixels na tela gráfica
-   165                                  ; utilizando a cor especificada em [cor_quadrado].
-   166                                  quadrado:
-   167 000000CB 50                          PUSH AX
-   168 000000CC 53                          PUSH BX
-   169 000000CD 51                          PUSH CX
-   170 000000CE 52                          PUSH DX
+   148                                  s_desenha:
+   149 000000BD E80B00                      CALL quadrado
+   150 000000C0 FF06[2300]                  INC WORD [contador]
+   151 000000C4 E9C3FF                      JMP proximo_quadrado
+   152                                  
+   153                                  fim_barra:
+   154 000000C7 5A                          POP DX
+   155 000000C8 5B                          POP BX
+   156 000000C9 58                          POP AX
+   157 000000CA C3                          RET
+   158                                  
+   159                                  
+   160                                  ; ==================================================
+   161                                  ; FUNCAO: QUADRADO
+   162                                  ; Desenha um quadrado verde de 13 x 13 pixels
+   163                                  ; ==================================================
+   164                                  quadrado:
+   165 000000CB 50                          PUSH AX
+   166 000000CC 53                          PUSH BX
+   167 000000CD 51                          PUSH CX
+   168 000000CE 52                          PUSH DX
+   169                                  
+   170 000000CF C706[2500]0000              MOV WORD [linhaPixel], 0
    171                                  
-   172 000000CF C706[2500]0000              MOV WORD [linhaPixel], 0
-   173                                  
-   174                                  linha_quadrado:
-   175 000000D5 A1[2500]                    MOV AX, [linhaPixel]
-   176 000000D8 3D0D00                      CMP AX, 13              ; Altura total do quadrado (13 pixels)
-   177 000000DB 7337                        JAE fim_quadrado
+   172                                  linha_quadrado:
+   173 000000D5 A1[2500]                    MOV AX, [linhaPixel]
+   174 000000D8 3D0D00                      CMP AX, 13
+   175 000000DB 7337                        JAE fim_quadrado
+   176                                  
+   177 000000DD C706[2700]0000              MOV WORD [colunaPixel], 0
    178                                  
-   179 000000DD C706[2700]0000              MOV WORD [colunaPixel], 0
-   180                                  
-   181                                  coluna_quadrado:
-   182 000000E3 A1[2700]                    MOV AX, [colunaPixel]
-   183 000000E6 3D0D00                      CMP AX, 13              ; Largura total do quadrado (13 pixels)
-   184 000000E9 7322                        JAE proxima_linha
-   185                                  
-   186                                      ; Calcula a coordenada X absoluta do pixel atual
-   187 000000EB A1[1F00]                    MOV AX, [xAtual]
-   188 000000EE 0306[2700]                  ADD AX, [colunaPixel]
-   189 000000F2 89C1                        MOV CX, AX
-   190                                  
-   191                                      ; Calcula a coordenada Y absoluta do pixel atual
-   192 000000F4 A1[2100]                    MOV AX, [yAtual]
-   193 000000F7 0306[2500]                  ADD AX, [linhaPixel]
-   194 000000FB 89C2                        MOV DX, AX
-   195                                  
-   196                                      ; Desenha o pixel na tela gráfica usando a BIOS (INT 10h / AH=0Ch)
-   197 000000FD B40C                        MOV AH, 0Ch
-   198 000000FF A0[0600]                    MOV AL, [cor_quadrado]  ; Cor do pixel
-   199 00000102 B700                        MOV BH, 0               ; Página de vídeo
-   200 00000104 CD10                        INT 10h
-   201                                  
-   202 00000106 FF06[2700]                  INC WORD [colunaPixel]
-   203 0000010A E9D6FF                      JMP coluna_quadrado
-   204                                  
-   205                                  proxima_linha:
-   206 0000010D FF06[2500]                  INC WORD [linhaPixel]
-   207 00000111 E9C1FF                      JMP linha_quadrado
-   208                                  
-   209                                  fim_quadrado:
-   210 00000114 5A                          POP DX
-   211 00000115 59                          POP CX
-   212 00000116 5B                          POP BX
-   213 00000117 58                          POP AX
-   214 00000118 C3                          RET
-   215                                  
+   179                                  coluna_quadrado:
+   180 000000E3 A1[2700]                    MOV AX, [colunaPixel]
+   181 000000E6 3D0D00                      CMP AX, 13
+   182 000000E9 7322                        JAE proxima_linha
+   183                                  
+   184                                      ; X do pixel
+   185 000000EB A1[1F00]                    MOV AX, [xAtual]
+   186 000000EE 0306[2700]                  ADD AX, [colunaPixel]
+   187 000000F2 89C1                        MOV CX, AX
+   188                                  
+   189                                      ; Y do pixel
+   190 000000F4 A1[2100]                    MOV AX, [yAtual]
+   191 000000F7 0306[2500]                  ADD AX, [linhaPixel]
+   192 000000FB 89C2                        MOV DX, AX
+   193                                  
+   194                                      ; Desenhar pixel verde
+   195 000000FD B40C                        MOV AH, 0Ch
+   196 000000FF A0[0600]                    MOV AL, [cor_quadrado]
+   197 00000102 B700                        MOV BH, 0
+   198 00000104 CD10                        INT 10h
+   199                                  
+   200 00000106 FF06[2700]                  INC WORD [colunaPixel]
+   201 0000010A E9D6FF                      JMP coluna_quadrado
+   202                                  
+   203                                  proxima_linha:
+   204 0000010D FF06[2500]                  INC WORD [linhaPixel]
+   205 00000111 E9C1FF                      JMP linha_quadrado
+   206                                  
+   207                                  fim_quadrado:
+   208 00000114 5A                          POP DX
+   209 00000115 59                          POP CX
+   210 00000116 5B                          POP BX
+   211 00000117 58                          POP AX
+   212 00000118 C3                          RET
+   213                                  
+   214                                  
+   215                                  segment data
    216                                  
-   217                                  segment data
-   218                                  
-   219                                  global energia_p1, energia_p2
-   220 00000000 0A00                    energia_p1 dw 10            ; Pontos de energia iniciais do Jogador 1 (10 rounds/hits)
-   221 00000002 0A00                    energia_p2 dw 10            ; Pontos de energia iniciais do Jogador 2
-   222 00000004 0A00                    energia_atual dw 10
-   223 00000006 0A                      cor_quadrado db 0Ah
-   224                                  
-   225                                  ; Strings estáticas de texto da HUD
-   226 00000007 4A4F4741444F522031      jogador1    db 'JOGADOR 1'
-   227 00000010 5653                    versus      db 'VS'
-   228 00000012 4A4F4741444F522032      jogador2    db 'JOGADOR 2'
-   229                                  
-   230                                  ; Coordenadas de posicionamento das barras na tela
-   231 0000001B 0000                    baseX       dw 0
-   232 0000001D 0000                    baseY       dw 0
-   233                                  
-   234                                  ; Coordenadas dinâmicas do bloco atual sendo desenhado
-   235 0000001F 0000                    xAtual      dw 0
-   236 00000021 0000                    yAtual      dw 0
-   237                                  
-   238                                  ; Variáveis auxiliares de controle de loops internos
-   239 00000023 0000                    contador    dw 0
-   240 00000025 0000                    linhaPixel  dw 0
-   241 00000027 0000                    colunaPixel dw 0
+   217                                  global energia_p1, energia_p2
+   218 00000000 0A00                    energia_p1 dw 10
+   219 00000002 0A00                    energia_p2 dw 10
+   220 00000004 0A00                    energia_atual dw 10
+   221 00000006 0A                      cor_quadrado db 0Ah
+   222                                  
+   223                                  ; Textos
+   224 00000007 4A4F4741444F522031      jogador1    db 'JOGADOR 1'
+   225 00000010 5653                    versus      db 'VS'
+   226 00000012 4A4F4741444F522032      jogador2    db 'JOGADOR 2'
+   227                                  
+   228                                  ; Coordenadas das barras
+   229 0000001B 0000                    baseX       dw 0
+   230 0000001D 0000                    baseY       dw 0
+   231                                  
+   232                                  ; Coordenadas do quadrado atual
+   233 0000001F 0000                    xAtual      dw 0
+   234 00000021 0000                    yAtual      dw 0
+   235                                  
+   236                                  ; Variaveis de controlo
+   237 00000023 0000                    contador    dw 0
+   238 00000025 0000                    linhaPixel  dw 0
+   239 00000027 0000                    colunaPixel dw 0
