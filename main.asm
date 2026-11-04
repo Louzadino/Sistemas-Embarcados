@@ -24,6 +24,9 @@ segment code
     extern instala_teclado, restaura_teclado
     extern key_q, key_a, key_d, key_left, key_right
 
+    ; Importação da função de menu inicial (seleção de cores dos lutadores)
+    extern MENU_INICIAL, cor_p1, cor_p2, cor
+
     ; INICIALIZAÇÃO DO SISTEMA E VÍDEO
     MOV AX, data
     MOV DS, AX
@@ -42,7 +45,20 @@ segment code
     MOV AH, 0
     INT 10h
 
-    ; Desenha a interface inicial, cenário e lutadores na tela
+    ; EXECUTA O MENU INTERATIVO DE SELEÇÃO DE CORES
+    ; (Fica retido aqui até os dois jogadores escolherem as cores e apertarem ENTER)  
+
+    CALL MENU_INICIAL
+
+    ; Já presente nas suas funções de desenho do P1:
+    MOV AL, [cor_p1]
+    MOV byte [cor], AL
+
+    ; Já presente nas suas funções de desenho do P2:
+    MOV AL, [cor_p2]
+    MOV byte [cor], AL
+
+    ; Inicia o cenário e renderiza os lutadores já com as cores escolhidas em 'cor_p1' e 'cor_p2'
     CALL desenha_cenario
     CALL render_p1
     CALL render_p2
@@ -50,28 +66,27 @@ segment code
 
     ; LAÇO PRINCIPAL DO JOGO (GAME LOOP)
 loop_principal:
-    ; Pequeno atraso para controlar a taxa de atualização dos quadros (framerate)
     CALL delay
 
-    ; Verifica se a tecla 'Q' foi pressionada para encerrar o jogo
+    ; --- Correção do pulo de saída ---
     CMP byte [key_q], 1
-    JE sair_jogo
+    JNE continua_game_loop
+    JMP sair_jogo
 
-    ; 1. Processa colisões e ataques (socos e chutes)
+continua_game_loop:
+    ; 1. Processa colisões e ataques
     CALL verifica_ataques
     
-    ; 2. Apaga o rastro antigo e atualiza a física/movimento dos lutadores
+    ; 2. Apaga rastro e atualiza física
     CALL apaga_lutadores
     CALL atualiza_movimento
 
-    ; 3. Renderiza o quadro atual (cenário, HUD e lutadores nas novas posições)
+    ; 3. Renderiza o quadro atual
     CALL render_p1
     CALL render_p2
     CALL desenha_cenario    
     
-    JMP loop_principal            
-
-
+    JMP loop_principal
 ; FUNÇÕES DE RENDERIZAÇÃO
 ; Decidem qual sprite do lutador desenhar com base 
 ; na física (se está pulando, agachando ou andando)

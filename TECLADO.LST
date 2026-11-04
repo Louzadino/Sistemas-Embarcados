@@ -1,0 +1,347 @@
+     1                                  ; RESUMO: Módulo responsável pelo tratamento de hardware do teclado 
+     2                                  ; através da interrupção INT 9h (substituindo a leitura padrão por software).
+     3                                  
+     4                                  segment data
+     5                                      ; Exportação das variáveis globais de estado das teclas (1 = pressionada, 0 = solta)
+     6                                      global key_a, key_d, key_left, key_right, key_q
+     7                                      global key_t, key_m, key_n, key_r
+     8                                      global key_w, key_s, key_up, key_down
+     9                                      global key_enter                      ; <-- 1. NOVO: Exporta a flag da tecla Enter
+    10                                      
+    11 00000000 00                          key_a        db 0
+    12 00000001 00                          key_d        db 0
+    13 00000002 00                          key_left     db 0
+    14 00000003 00                          key_right    db 0
+    15 00000004 00                          key_q        db 0
+    16 00000005 00                          key_t        db 0
+    17 00000006 00                          key_m        db 0
+    18 00000007 00                          key_n        db 0
+    19 00000008 00                          key_r        db 0
+    20 00000009 00                          key_w        db 0
+    21 0000000A 00                          key_s        db 0
+    22 0000000B 00                          key_up       db 0
+    23 0000000C 00                          key_down     db 0
+    24 0000000D 00                          key_enter    db 0                      ; <-- 1. NOVO: Estado da tecla Enter (0=solta, 1=pressionada)
+    25                                      
+    26                                      ; Armazenamento do vetor original da interrupção de teclado do DOS
+    27 0000000E 0000                        velho_isr_off dw 0
+    28 00000010 0000                        velho_isr_seg dw 0
+    29                                  
+    30                                  segment code
+    31                                      global instala_teclado, restaura_teclado
+    32                                  
+    33                                  ; FUNÇÃO: INSTALA_TECLADO
+    34                                  instala_teclado:
+    35 00000000 50                          PUSH AX
+    36 00000001 53                          PUSH BX
+    37 00000002 06                          PUSH ES
+    38 00000003 31C0                        XOR AX, AX
+    39 00000005 8EC0                        MOV ES, AX                      ; Aponta para a IVT (Segmento 0)
+    40                                      
+    41 00000007 268B1E2400                  MOV BX, [ES:24h]
+    42 0000000C 891E[0E00]                  MOV [velho_isr_off], BX
+    43 00000010 268B1E2600                  MOV BX, [ES:26h]
+    44 00000015 891E[1000]                  MOV [velho_isr_seg], BX
+    45                                      
+    46 00000019 FA                          CLI                             ; Desativa interrupções
+    47 0000001A 26C7062400[4A00]            MOV word [ES:24h], nova_int9    ; Insere a nova rotina
+    48 00000021 268C0E2600                  MOV word [ES:26h], CS
+    49 00000026 FB                          STI                             ; Reativa interrupções
+    50                                      
+    51 00000027 07                          POP ES
+    52 00000028 5B                          POP BX
+    53 00000029 58                          POP AX
+    54 0000002A C3                          RET
+    55                                  
+    56                                  ; FUNÇÃO: RESTAURA_TECLADO
+    57                                  restaura_teclado:
+    58 0000002B 50                          PUSH AX
+    59 0000002C 53                          PUSH BX
+    60 0000002D 06                          PUSH ES
+    61 0000002E 31C0                        XOR AX, AX
+    62 00000030 8EC0                        MOV ES, AX
+    63                                      
+    64 00000032 FA                          CLI
+    65 00000033 8B1E[0E00]                  MOV BX, [velho_isr_off]
+    66 00000037 26891E2400                  MOV [ES:24h], BX                ; Restaura o offset original
+    67 0000003C 8B1E[1000]                  MOV BX, [velho_isr_seg]
+    68 00000040 26891E2600                  MOV [ES:26h], BX                ; Restaura o segmento original
+    69 00000045 FB                          STI
+    70                                      
+    71 00000046 07                          POP ES
+    72 00000047 5B                          POP BX
+    73 00000048 58                          POP AX
+    74 00000049 C3                          RET
+    75                                  
+    76                                  ; ROTINA DE INTERRUPÇÃO DE HARDWARE (INT 9h)
+    77                                  nova_int9:
+    78 0000004A 50                          PUSH AX
+    79 0000004B 1E                          PUSH DS
+    80 0000004C B8[0000]                    MOV AX, data
+    81 0000004F 8ED8                        MOV DS, AX                      ; Configura o segmento de dados local
+    82                                      
+    83 00000051 E460                        IN AL, 60h                      ; Lê o scancode da porta 60h
+    84                                  
+    85 00000053 3CE0                        CMP AL, 0E0h                    ; Ignora códigos de prefixo estendido
+    86 00000055 7503                        JNE continua
+    87 00000057 E9D001                      JMP fim_int9
+    88                                  continua:
+    89                                  
+    90                                      ; MOVIMENTO P1 (Teclas A e D) 
+    91 0000005A 3C1E                        CMP AL, 1Eh         ; Make A
+    92 0000005C 7503                        JNE continua_reseta_a
+    93 0000005E E9F100                      JMP seta_a
+    94                                  continua_reseta_a:
+    95 00000061 3C9E                        CMP AL, 9Eh         ; Break A
+    96 00000063 7503                        JNE continua_seta_d
+    97 00000065 E9F200                      JMP reseta_a
+    98                                  continua_seta_d:
+    99 00000068 3C20                        CMP AL, 20h         ; Make D
+   100 0000006A 7503                        JNE continua_reseta_d
+   101 0000006C E9F300                      JMP seta_d
+   102                                  continua_reseta_d:
+   103 0000006F 3CA0                        CMP AL, 0A0h        ; Break D
+   104 00000071 7503                        JNE continua_seta_left
+   105 00000073 E9F400                      JMP reseta_d
+   106                                  
+   107                                      ; MOVIMENTO P2 (Setas Esquerda/Direita e teclas J/L) 
+   108                                  continua_seta_left:
+   109 00000076 3C4B                        CMP AL, 4Bh         ; Seta Esquerda (Make)
+   110 00000078 7503                        JNE continua_seta_left_j
+   111 0000007A E9F500                      JMP seta_left
+   112                                  continua_seta_left_j:
+   113 0000007D 3C24                        CMP AL, 24h         ; Tecla J (Make)
+   114 0000007F 7503                        JNE continua_reseta_left
+   115 00000081 E9EE00                      JMP seta_left
+   116                                  continua_reseta_left:
+   117 00000084 3CCB                        CMP AL, 0CBh        ; Seta Esquerda (Break)
+   118 00000086 7503                        JNE continua_reseta_left_j
+   119 00000088 E9EF00                      JMP reseta_left
+   120                                  continua_reseta_left_j:
+   121 0000008B 3CA4                        CMP AL, 0A4h        ; Tecla J (Break)
+   122 0000008D 7503                        JNE continua_seta_right
+   123 0000008F E9E800                      JMP reseta_left
+   124                                  
+   125                                  continua_seta_right:
+   126 00000092 3C4D                        CMP AL, 4Dh         ; Seta Direita (Make)
+   127 00000094 7503                        JNE continua_seta_right_l
+   128 00000096 E9E900                      JMP seta_right
+   129                                  continua_seta_right_l:
+   130 00000099 3C26                        CMP AL, 26h         ; Tecla L (Make)
+   131 0000009B 7503                        JNE continua_reseta_right
+   132 0000009D E9E200                      JMP seta_right
+   133                                  continua_reseta_right:
+   134 000000A0 3CCD                        CMP AL, 0CDh        ; Seta Direita (Break)
+   135 000000A2 7503                        JNE continua_reseta_right_l
+   136 000000A4 E9E300                      JMP reseta_right
+   137                                  continua_reseta_right_l:
+   138 000000A7 3CA6                        CMP AL, 0A6h        ; Tecla L (Break)
+   139 000000A9 7503                        JNE continua_seta_t
+   140 000000AB E9DC00                      JMP reseta_right
+   141                                  
+   142                                      ; SOCOS (Teclas T e M) 
+   143                                  continua_seta_t:
+   144 000000AE 3C14                        CMP AL, 14h         ; Make T
+   145 000000B0 7503                        JNE continua_reseta_t
+   146 000000B2 E9E500                      JMP seta_t
+   147                                  continua_reseta_t:
+   148 000000B5 3C94                        CMP AL, 94h         ; Break T
+   149 000000B7 7503                        JNE continua_seta_m
+   150 000000B9 E9E600                      JMP reseta_t
+   151                                  continua_seta_m:
+   152 000000BC 3C32                        CMP AL, 32h         ; Make M
+   153 000000BE 7503                        JNE continua_reseta_m
+   154 000000C0 E9E700                      JMP seta_m
+   155                                  continua_reseta_m:
+   156 000000C3 3CB2                        CMP AL, 0B2h        ; Break M
+   157 000000C5 7503                        JNE continua_seta_n
+   158 000000C7 E9E800                      JMP reseta_m
+   159                                  
+   160                                      ; CHUTES (Teclas N e R) 
+   161                                  continua_seta_n:
+   162 000000CA 3C31                        CMP AL, 31h         ; Make N
+   163 000000CC 7503                        JNE continua_reseta_n
+   164 000000CE E9E900                      JMP seta_n
+   165                                  continua_reseta_n:
+   166 000000D1 3CB1                        CMP AL, 0B1h        ; Break N
+   167 000000D3 7503                        JNE continua_seta_r
+   168 000000D5 E9EA00                      JMP reseta_n
+   169                                  continua_seta_r:
+   170 000000D8 3C13                        CMP AL, 13h         ; Make R
+   171 000000DA 7503                        JNE continua_reseta_r
+   172 000000DC E9EB00                      JMP seta_r
+   173                                  continua_reseta_r:
+   174 000000DF 3C93                        CMP AL, 93h         ; Break R
+   175 000000E1 7503                        JNE continua_seta_q
+   176 000000E3 E9EC00                      JMP reseta_r
+   177                                  
+   178                                      ; SAIR DO JOGO (Tecla Q) 
+   179                                  continua_seta_q:
+   180 000000E6 3C10                        CMP AL, 10h         ; Make Q
+   181 000000E8 7503                        JNE continua_seta_w
+   182 000000EA E9A500                      JMP seta_q
+   183                                  
+   184                                      ; PULOS E DEFESAS P1 (Teclas W e S) 
+   185                                  continua_seta_w:
+   186 000000ED 3C11                        CMP AL, 11h         ; Make W
+   187 000000EF 7503                        JNE continua_reseta_w
+   188 000000F1 E9E600                      JMP seta_w
+   189                                  continua_reseta_w:
+   190 000000F4 3C91                        CMP AL, 91h         ; Break W
+   191 000000F6 7503                        JNE continua_seta_s
+   192 000000F8 E9E700                      JMP reseta_w
+   193                                  continua_seta_s:
+   194 000000FB 3C1F                        CMP AL, 1Fh         ; Make S
+   195 000000FD 7503                        JNE continua_reseta_s
+   196 000000FF E9E800                      JMP seta_s
+   197                                  continua_reseta_s:
+   198 00000102 3C9F                        CMP AL, 9Fh         ; Break S
+   199 00000104 7503                        JNE continua_seta_up
+   200 00000106 E9E900                      JMP reseta_s
+   201                                  
+   202                                      ; PULOS E DEFESAS P2 (Setas Cima/Baixo e teclas I/K) 
+   203                                  continua_seta_up:
+   204 00000109 3C48                        CMP AL, 48h         ; Seta Cima (Make)
+   205 0000010B 7503                        JNE continua_seta_up_i
+   206 0000010D E9EA00                      JMP seta_up
+   207                                  continua_seta_up_i:
+   208 00000110 3C17                        CMP AL, 17h         ; Tecla I (Make)
+   209 00000112 7503                        JNE continua_reseta_up
+   210 00000114 E9E300                      JMP seta_up
+   211                                  continua_reseta_up:
+   212 00000117 3CC8                        CMP AL, 0C8h        ; Seta Cima (Break)
+   213 00000119 7503                        JNE continua_reseta_up_i
+   214 0000011B E9E400                      JMP reseta_up
+   215                                  continua_reseta_up_i:
+   216 0000011E 3C97                        CMP AL, 97h         ; Tecla I (Break)
+   217 00000120 7503                        JNE continua_seta_down
+   218 00000122 E9DD00                      JMP reseta_up
+   219                                  continua_seta_down:
+   220 00000125 3C50                        CMP AL, 50h         ; Seta Baixo (Make)
+   221 00000127 7503                        JNE continua_seta_down_k
+   222 00000129 E9DE00                      JMP seta_down
+   223                                  continua_seta_down_k:
+   224 0000012C 3C25                        CMP AL, 25h         ; Tecla K (Make)
+   225 0000012E 7503                        JNE continua_reseta_down
+   226 00000130 E9D700                      JMP seta_down
+   227                                  continua_reseta_down:
+   228 00000133 3CD0                        CMP AL, 0D0h        ; Seta Baixo (Break)
+   229 00000135 7503                        JNE continua_reseta_down_k
+   230 00000137 E9D800                      JMP reseta_down
+   231                                  continua_reseta_down_k:
+   232 0000013A 3CA5                        CMP AL, 0A5h        ; Tecla K (Break)
+   233 0000013C 7503                        JNE continua_seta_enter           ; <-- 2. NOVO: Desvia para testar a tecla Enter
+   234 0000013E E9D100                      JMP reseta_down
+   235                                  
+   236                                      ; -------------------------------------------------------------
+   237                                      ; TECLA ENTER (Scancode 1Ch / Break 9Ch) 
+   238                                      ; -------------------------------------------------------------
+   239                                  continua_seta_enter:
+   240 00000141 3C1C                        CMP AL, 1Ch         ; Scancode Make da tecla Enter (Pressionada)
+   241 00000143 7503                        JNE continua_reseta_enter
+   242 00000145 E9D200                      JMP seta_enter
+   243                                  continua_reseta_enter:
+   244 00000148 3C9C                        CMP AL, 9Ch         ; Scancode Break da tecla Enter (Solta)
+   245 0000014A 7503                        JNE continua_final
+   246 0000014C E9D300                      JMP reseta_enter
+   247                                  
+   248                                  continua_final:
+   249 0000014F E9D800                      JMP fim_int9
+   250                                  
+   251                                  ; MANIPULADORES DE ESTADO DAS TECLAS (FLAGS)
+   252                                  seta_a:      
+   253 00000152 C606[0000]01                MOV byte [key_a], 1
+   254 00000157 E9D000                      JMP fim_int9
+   255                                  reseta_a:     
+   256 0000015A C606[0000]00                MOV byte [key_a], 0
+   257 0000015F E9C800                      JMP fim_int9
+   258                                  seta_d:       
+   259 00000162 C606[0100]01                MOV byte [key_d], 1
+   260 00000167 E9C000                      JMP fim_int9
+   261                                  reseta_d:     
+   262 0000016A C606[0100]00                MOV byte [key_d], 0
+   263 0000016F E9B800                      JMP fim_int9
+   264                                  seta_left:    
+   265 00000172 C606[0200]01                MOV byte [key_left], 1
+   266 00000177 E9B000                      JMP fim_int9
+   267                                  reseta_left:  
+   268 0000017A C606[0200]00                MOV byte [key_left], 0
+   269 0000017F E9A800                      JMP fim_int9
+   270                                  seta_right:   
+   271 00000182 C606[0300]01                MOV byte [key_right], 1
+   272 00000187 E9A000                      JMP fim_int9
+   273                                  reseta_right: 
+   274 0000018A C606[0300]00                MOV byte [key_right], 0
+   275 0000018F E99800                      JMP fim_int9
+   276                                  seta_q:       
+   277 00000192 C606[0400]01                MOV byte [key_q], 1
+   278 00000197 E99000                      JMP fim_int9
+   279                                  seta_t:       
+   280 0000019A C606[0500]01                MOV byte [key_t], 1
+   281 0000019F E98800                      JMP fim_int9
+   282                                  reseta_t:     
+   283 000001A2 C606[0500]00                MOV byte [key_t], 0
+   284 000001A7 E98000                      JMP fim_int9
+   285                                  seta_m:       
+   286 000001AA C606[0600]01                MOV byte [key_m], 1
+   287 000001AF E97800                      JMP fim_int9
+   288                                  reseta_m:     
+   289 000001B2 C606[0600]00                MOV byte [key_m], 0
+   290 000001B7 E97000                      JMP fim_int9
+   291                                  seta_n:       
+   292 000001BA C606[0700]01                MOV byte [key_n], 1
+   293 000001BF E96800                      JMP fim_int9
+   294                                  reseta_n:     
+   295 000001C2 C606[0700]00                MOV byte [key_n], 0
+   296 000001C7 E96000                      JMP fim_int9
+   297                                  seta_r:       
+   298 000001CA C606[0800]01                MOV byte [key_r], 1
+   299 000001CF E95800                      JMP fim_int9
+   300                                  reseta_r:     
+   301 000001D2 C606[0800]00                MOV byte [key_r], 0
+   302 000001D7 E95000                      JMP fim_int9
+   303                                  seta_w:       
+   304 000001DA C606[0900]01                MOV byte [key_w], 1
+   305 000001DF E94800                      JMP fim_int9
+   306                                  reseta_w:     
+   307 000001E2 C606[0900]00                MOV byte [key_w], 0
+   308 000001E7 E94000                      JMP fim_int9
+   309                                  seta_s:       
+   310 000001EA C606[0A00]01                MOV byte [key_s], 1
+   311 000001EF E93800                      JMP fim_int9
+   312                                  reseta_s:     
+   313 000001F2 C606[0A00]00                MOV byte [key_s], 0
+   314 000001F7 E93000                      JMP fim_int9
+   315                                  seta_up:      
+   316 000001FA C606[0B00]01                MOV byte [key_up], 1
+   317 000001FF E92800                      JMP fim_int9
+   318                                  reseta_up:    
+   319 00000202 C606[0B00]00                MOV byte [key_up], 0
+   320 00000207 E92000                      JMP fim_int9
+   321                                  seta_down:    
+   322 0000020A C606[0C00]01                MOV byte [key_down], 1
+   323 0000020F E91800                      JMP fim_int9
+   324                                  reseta_down:  
+   325 00000212 C606[0C00]00                MOV byte [key_down], 0
+   326 00000217 E91000                      JMP fim_int9
+   327                                  
+   328                                  ; 3. NOVO: Manipuladores do estado da tecla Enter
+   329                                  seta_enter:
+   330 0000021A C606[0D00]01                MOV byte [key_enter], 1
+   331 0000021F E90800                      JMP fim_int9
+   332                                  reseta_enter:
+   333 00000222 C606[0D00]00                MOV byte [key_enter], 0
+   334 00000227 E90000                      JMP fim_int9
+   335                                  
+   336                                  ; FIM DA INTERRUPÇÃO
+   337                                  fim_int9:
+   338 0000022A E461                        IN AL, 61h
+   339 0000022C 0C80                        OR AL, 80h
+   340 0000022E E661                        OUT 61h, AL
+   341 00000230 247F                        AND AL, 7Fh
+   342 00000232 E661                        OUT 61h, AL
+   343 00000234 B020                        MOV AL, 20h
+   344 00000236 E620                        OUT 20h, AL
+   345 00000238 1F                          POP DS
+   346 00000239 58                          POP AX
+   347 0000023A CF                          IRET

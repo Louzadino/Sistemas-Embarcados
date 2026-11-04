@@ -1,0 +1,1790 @@
+     1                                  ; RESUMO: Módulo gráfico responsável pela renderização dos lutadores e 
+     2                                  ; gerenciamento de suas posições e cores na arena. Utiliza macros do 
+     3                                  ; NASM para desenhar linhas e círculos de forma compacta, cobrindo todas 
+     4                                  ; as poses (normal, passos, agachado, soco e chute) para ambos os jogadores.
+     5                                  
+     6                                  segment data
+     7                                      global p1_x, p1_y, p2_x, p2_y
+     8                                      
+     9                                      ; Importa as cores que foram atualizadas pelo menu_inicial.asm
+    10                                      extern cor_p1, cor_p2
+    11                                      
+    12                                      ; Coordenadas iniciais dos lutadores na tela
+    13 00000000 9600                        p1_x dw 150
+    14 00000002 7300                        p1_y dw 115
+    15 00000004 EA01                        p2_x dw 490
+    16 00000006 7300                        p2_y dw 115
+    17                                      
+    18                                  segment code
+    19                                      global desenha_lutadores, apaga_lutadores
+    20                                      global desenha_p1_normal, desenha_p2_normal
+    21                                      global desenha_p1_agachado, desenha_p2_agachado
+    22                                      global desenha_p1_andando, desenha_p2_andando
+    23                                      global desenha_soco_p1, desenha_soco_p2
+    24                                      global desenha_chute_p1, desenha_chute_p2
+    25                                      
+    26                                      extern line, circle, cor
+    27                                  
+    28                                  ; MACROS DE DESENHO GEOMETRICO
+    29                                  ; Simplificam a chamada das funções de primitivas gráficas por deslocamento
+    30                                  
+    31                                  ; Macro para desenhar linhas relativas à base (X, Y)
+    32                                  ; Parâmetros: %1=BaseX, %2=OffsetX1, %3=BaseY, %4=OffsetY1, %5=OffsetX2, %6=OffsetY2
+    33                                  %macro LINE 6
+    34                                      MOV AX, %1
+    35                                      ADD AX, %2
+    36                                      PUSH AX
+    37                                      MOV AX, %3
+    38                                      ADD AX, %4
+    39                                      PUSH AX
+    40                                      MOV AX, %1
+    41                                      ADD AX, %5
+    42                                      PUSH AX
+    43                                      MOV AX, %3
+    44                                      ADD AX, %6
+    45                                      PUSH AX
+    46                                      CALL line
+    47                                  %endmacro
+    48                                  
+    49                                  ; Macro para desenhar a cabeça (círculo com raio fixo de 10 pixels)
+    50                                  ; Parâmetros: %1=BaseX, %2=OffsetX, %3=BaseY, %4=OffsetY
+    51                                  %macro CIRCLE 4
+    52                                      MOV AX, %1
+    53                                      ADD AX, %2
+    54                                      PUSH AX
+    55                                      MOV AX, %3
+    56                                      ADD AX, %4
+    57                                      PUSH AX
+    58                                      MOV AX, 10
+    59                                      PUSH AX
+    60                                      CALL circle
+    61                                  %endmacro
+    62                                  
+    63                                  desenha_lutadores:
+    64 00000000 E80400                      CALL desenha_p1_normal
+    65 00000003 E8FC00                      CALL desenha_p2_normal
+    66 00000006 C3                          RET
+    67                                  
+    68                                  ; POSES NORMAIS (EM PÉ)
+    69                                  desenha_p1_normal:
+    70 00000007 55                          PUSH BP
+    71 00000008 89E5                        MOV BP, SP
+    72 0000000A 50                          PUSH AX
+    73                                      
+    74                                      ; Aplica a cor customizada do Jogador 1
+    75 0000000B A0[0000]                    MOV AL, [cor_p1]
+    76 0000000E A2[0000]                    MOV byte [cor], AL
+    77                                      
+    78                                      CIRCLE [p1_x], 0, [p1_y], 0           ; Cabeça
+    79 00000011 A1[0000]            <1>     MOV AX, %1
+    80 00000014 050000              <1>     ADD AX, %2
+    81 00000017 50                  <1>     PUSH AX
+    82 00000018 A1[0200]            <1>     MOV AX, %3
+    83 0000001B 050000              <1>     ADD AX, %4
+    84 0000001E 50                  <1>     PUSH AX
+    85 0000001F B80A00              <1>     MOV AX, 10
+    86 00000022 50                  <1>     PUSH AX
+    87 00000023 E8(0000)            <1>     CALL circle
+    88                                      LINE [p1_x], 0, [p1_y], -10, 0, -35   ; Tronco/Corpo
+    89 00000026 A1[0000]            <1>     MOV AX, %1
+    90 00000029 050000              <1>     ADD AX, %2
+    91 0000002C 50                  <1>     PUSH AX
+    92 0000002D A1[0200]            <1>     MOV AX, %3
+    93 00000030 05F6FF              <1>     ADD AX, %4
+    94 00000033 50                  <1>     PUSH AX
+    95 00000034 A1[0000]            <1>     MOV AX, %1
+    96 00000037 050000              <1>     ADD AX, %5
+    97 0000003A 50                  <1>     PUSH AX
+    98 0000003B A1[0200]            <1>     MOV AX, %3
+    99 0000003E 05DDFF              <1>     ADD AX, %6
+   100 00000041 50                  <1>     PUSH AX
+   101 00000042 E8(0000)            <1>     CALL line
+   102                                      LINE [p1_x], 0, [p1_y], -15, 5, -25   ; Braço Trás (Ombro ao Cotovelo)
+   103 00000045 A1[0000]            <1>     MOV AX, %1
+   104 00000048 050000              <1>     ADD AX, %2
+   105 0000004B 50                  <1>     PUSH AX
+   106 0000004C A1[0200]            <1>     MOV AX, %3
+   107 0000004F 05F1FF              <1>     ADD AX, %4
+   108 00000052 50                  <1>     PUSH AX
+   109 00000053 A1[0000]            <1>     MOV AX, %1
+   110 00000056 050500              <1>     ADD AX, %5
+   111 00000059 50                  <1>     PUSH AX
+   112 0000005A A1[0200]            <1>     MOV AX, %3
+   113 0000005D 05E7FF              <1>     ADD AX, %6
+   114 00000060 50                  <1>     PUSH AX
+   115 00000061 E8(0000)            <1>     CALL line
+   116                                      LINE [p1_x], 5, [p1_y], -25, 10, -5   ; Braço Trás (Cotovelo à Mão)
+   117 00000064 A1[0000]            <1>     MOV AX, %1
+   118 00000067 050500              <1>     ADD AX, %2
+   119 0000006A 50                  <1>     PUSH AX
+   120 0000006B A1[0200]            <1>     MOV AX, %3
+   121 0000006E 05E7FF              <1>     ADD AX, %4
+   122 00000071 50                  <1>     PUSH AX
+   123 00000072 A1[0000]            <1>     MOV AX, %1
+   124 00000075 050A00              <1>     ADD AX, %5
+   125 00000078 50                  <1>     PUSH AX
+   126 00000079 A1[0200]            <1>     MOV AX, %3
+   127 0000007C 05FBFF              <1>     ADD AX, %6
+   128 0000007F 50                  <1>     PUSH AX
+   129 00000080 E8(0000)            <1>     CALL line
+   130                                      LINE [p1_x], 0, [p1_y], -15, 10, -25  ; Braço Frente (Ombro ao Cotovelo)
+   131 00000083 A1[0000]            <1>     MOV AX, %1
+   132 00000086 050000              <1>     ADD AX, %2
+   133 00000089 50                  <1>     PUSH AX
+   134 0000008A A1[0200]            <1>     MOV AX, %3
+   135 0000008D 05F1FF              <1>     ADD AX, %4
+   136 00000090 50                  <1>     PUSH AX
+   137 00000091 A1[0000]            <1>     MOV AX, %1
+   138 00000094 050A00              <1>     ADD AX, %5
+   139 00000097 50                  <1>     PUSH AX
+   140 00000098 A1[0200]            <1>     MOV AX, %3
+   141 0000009B 05E7FF              <1>     ADD AX, %6
+   142 0000009E 50                  <1>     PUSH AX
+   143 0000009F E8(0000)            <1>     CALL line
+   144                                      LINE [p1_x], 10, [p1_y], -25, 20, -5  ; Braço Frente (Cotovelo à Mão)
+   145 000000A2 A1[0000]            <1>     MOV AX, %1
+   146 000000A5 050A00              <1>     ADD AX, %2
+   147 000000A8 50                  <1>     PUSH AX
+   148 000000A9 A1[0200]            <1>     MOV AX, %3
+   149 000000AC 05E7FF              <1>     ADD AX, %4
+   150 000000AF 50                  <1>     PUSH AX
+   151 000000B0 A1[0000]            <1>     MOV AX, %1
+   152 000000B3 051400              <1>     ADD AX, %5
+   153 000000B6 50                  <1>     PUSH AX
+   154 000000B7 A1[0200]            <1>     MOV AX, %3
+   155 000000BA 05FBFF              <1>     ADD AX, %6
+   156 000000BD 50                  <1>     PUSH AX
+   157 000000BE E8(0000)            <1>     CALL line
+   158                                      LINE [p1_x], 0, [p1_y], -35, -15, -65 ; Perna Trás
+   159 000000C1 A1[0000]            <1>     MOV AX, %1
+   160 000000C4 050000              <1>     ADD AX, %2
+   161 000000C7 50                  <1>     PUSH AX
+   162 000000C8 A1[0200]            <1>     MOV AX, %3
+   163 000000CB 05DDFF              <1>     ADD AX, %4
+   164 000000CE 50                  <1>     PUSH AX
+   165 000000CF A1[0000]            <1>     MOV AX, %1
+   166 000000D2 05F1FF              <1>     ADD AX, %5
+   167 000000D5 50                  <1>     PUSH AX
+   168 000000D6 A1[0200]            <1>     MOV AX, %3
+   169 000000D9 05BFFF              <1>     ADD AX, %6
+   170 000000DC 50                  <1>     PUSH AX
+   171 000000DD E8(0000)            <1>     CALL line
+   172                                      LINE [p1_x], 0, [p1_y], -35, 15, -65  ; Perna Frente
+   173 000000E0 A1[0000]            <1>     MOV AX, %1
+   174 000000E3 050000              <1>     ADD AX, %2
+   175 000000E6 50                  <1>     PUSH AX
+   176 000000E7 A1[0200]            <1>     MOV AX, %3
+   177 000000EA 05DDFF              <1>     ADD AX, %4
+   178 000000ED 50                  <1>     PUSH AX
+   179 000000EE A1[0000]            <1>     MOV AX, %1
+   180 000000F1 050F00              <1>     ADD AX, %5
+   181 000000F4 50                  <1>     PUSH AX
+   182 000000F5 A1[0200]            <1>     MOV AX, %3
+   183 000000F8 05BFFF              <1>     ADD AX, %6
+   184 000000FB 50                  <1>     PUSH AX
+   185 000000FC E8(0000)            <1>     CALL line
+   186                                      
+   187 000000FF 58                          POP AX
+   188 00000100 5D                          POP BP
+   189 00000101 C3                          RET
+   190                                  
+   191                                  desenha_p2_normal:
+   192 00000102 55                          PUSH BP
+   193 00000103 89E5                        MOV BP, SP
+   194 00000105 50                          PUSH AX
+   195                                      
+   196                                      ; Aplica a cor customizada do Jogador 2
+   197 00000106 A0[0000]                    MOV AL, [cor_p2]
+   198 00000109 A2[0000]                    MOV byte [cor], AL
+   199                                      
+   200                                      CIRCLE [p2_x], 0, [p2_y], 0
+   201 0000010C A1[0400]            <1>     MOV AX, %1
+   202 0000010F 050000              <1>     ADD AX, %2
+   203 00000112 50                  <1>     PUSH AX
+   204 00000113 A1[0600]            <1>     MOV AX, %3
+   205 00000116 050000              <1>     ADD AX, %4
+   206 00000119 50                  <1>     PUSH AX
+   207 0000011A B80A00              <1>     MOV AX, 10
+   208 0000011D 50                  <1>     PUSH AX
+   209 0000011E E8(0000)            <1>     CALL circle
+   210                                      LINE [p2_x], 0, [p2_y], -10, 0, -35   
+   211 00000121 A1[0400]            <1>     MOV AX, %1
+   212 00000124 050000              <1>     ADD AX, %2
+   213 00000127 50                  <1>     PUSH AX
+   214 00000128 A1[0600]            <1>     MOV AX, %3
+   215 0000012B 05F6FF              <1>     ADD AX, %4
+   216 0000012E 50                  <1>     PUSH AX
+   217 0000012F A1[0400]            <1>     MOV AX, %1
+   218 00000132 050000              <1>     ADD AX, %5
+   219 00000135 50                  <1>     PUSH AX
+   220 00000136 A1[0600]            <1>     MOV AX, %3
+   221 00000139 05DDFF              <1>     ADD AX, %6
+   222 0000013C 50                  <1>     PUSH AX
+   223 0000013D E8(0000)            <1>     CALL line
+   224                                      LINE [p2_x], 0, [p2_y], -15, -5, -25  
+   225 00000140 A1[0400]            <1>     MOV AX, %1
+   226 00000143 050000              <1>     ADD AX, %2
+   227 00000146 50                  <1>     PUSH AX
+   228 00000147 A1[0600]            <1>     MOV AX, %3
+   229 0000014A 05F1FF              <1>     ADD AX, %4
+   230 0000014D 50                  <1>     PUSH AX
+   231 0000014E A1[0400]            <1>     MOV AX, %1
+   232 00000151 05FBFF              <1>     ADD AX, %5
+   233 00000154 50                  <1>     PUSH AX
+   234 00000155 A1[0600]            <1>     MOV AX, %3
+   235 00000158 05E7FF              <1>     ADD AX, %6
+   236 0000015B 50                  <1>     PUSH AX
+   237 0000015C E8(0000)            <1>     CALL line
+   238                                      LINE [p2_x], -5, [p2_y], -25, -10, -5 
+   239 0000015F A1[0400]            <1>     MOV AX, %1
+   240 00000162 05FBFF              <1>     ADD AX, %2
+   241 00000165 50                  <1>     PUSH AX
+   242 00000166 A1[0600]            <1>     MOV AX, %3
+   243 00000169 05E7FF              <1>     ADD AX, %4
+   244 0000016C 50                  <1>     PUSH AX
+   245 0000016D A1[0400]            <1>     MOV AX, %1
+   246 00000170 05F6FF              <1>     ADD AX, %5
+   247 00000173 50                  <1>     PUSH AX
+   248 00000174 A1[0600]            <1>     MOV AX, %3
+   249 00000177 05FBFF              <1>     ADD AX, %6
+   250 0000017A 50                  <1>     PUSH AX
+   251 0000017B E8(0000)            <1>     CALL line
+   252                                      LINE [p2_x], 0, [p2_y], -15, -10, -25 
+   253 0000017E A1[0400]            <1>     MOV AX, %1
+   254 00000181 050000              <1>     ADD AX, %2
+   255 00000184 50                  <1>     PUSH AX
+   256 00000185 A1[0600]            <1>     MOV AX, %3
+   257 00000188 05F1FF              <1>     ADD AX, %4
+   258 0000018B 50                  <1>     PUSH AX
+   259 0000018C A1[0400]            <1>     MOV AX, %1
+   260 0000018F 05F6FF              <1>     ADD AX, %5
+   261 00000192 50                  <1>     PUSH AX
+   262 00000193 A1[0600]            <1>     MOV AX, %3
+   263 00000196 05E7FF              <1>     ADD AX, %6
+   264 00000199 50                  <1>     PUSH AX
+   265 0000019A E8(0000)            <1>     CALL line
+   266                                      LINE [p2_x], -10, [p2_y], -25, -20, -5
+   267 0000019D A1[0400]            <1>     MOV AX, %1
+   268 000001A0 05F6FF              <1>     ADD AX, %2
+   269 000001A3 50                  <1>     PUSH AX
+   270 000001A4 A1[0600]            <1>     MOV AX, %3
+   271 000001A7 05E7FF              <1>     ADD AX, %4
+   272 000001AA 50                  <1>     PUSH AX
+   273 000001AB A1[0400]            <1>     MOV AX, %1
+   274 000001AE 05ECFF              <1>     ADD AX, %5
+   275 000001B1 50                  <1>     PUSH AX
+   276 000001B2 A1[0600]            <1>     MOV AX, %3
+   277 000001B5 05FBFF              <1>     ADD AX, %6
+   278 000001B8 50                  <1>     PUSH AX
+   279 000001B9 E8(0000)            <1>     CALL line
+   280                                      LINE [p2_x], 0, [p2_y], -35, -15, -65 
+   281 000001BC A1[0400]            <1>     MOV AX, %1
+   282 000001BF 050000              <1>     ADD AX, %2
+   283 000001C2 50                  <1>     PUSH AX
+   284 000001C3 A1[0600]            <1>     MOV AX, %3
+   285 000001C6 05DDFF              <1>     ADD AX, %4
+   286 000001C9 50                  <1>     PUSH AX
+   287 000001CA A1[0400]            <1>     MOV AX, %1
+   288 000001CD 05F1FF              <1>     ADD AX, %5
+   289 000001D0 50                  <1>     PUSH AX
+   290 000001D1 A1[0600]            <1>     MOV AX, %3
+   291 000001D4 05BFFF              <1>     ADD AX, %6
+   292 000001D7 50                  <1>     PUSH AX
+   293 000001D8 E8(0000)            <1>     CALL line
+   294                                      LINE [p2_x], 0, [p2_y], -35, 15, -65  
+   295 000001DB A1[0400]            <1>     MOV AX, %1
+   296 000001DE 050000              <1>     ADD AX, %2
+   297 000001E1 50                  <1>     PUSH AX
+   298 000001E2 A1[0600]            <1>     MOV AX, %3
+   299 000001E5 05DDFF              <1>     ADD AX, %4
+   300 000001E8 50                  <1>     PUSH AX
+   301 000001E9 A1[0400]            <1>     MOV AX, %1
+   302 000001EC 050F00              <1>     ADD AX, %5
+   303 000001EF 50                  <1>     PUSH AX
+   304 000001F0 A1[0600]            <1>     MOV AX, %3
+   305 000001F3 05BFFF              <1>     ADD AX, %6
+   306 000001F6 50                  <1>     PUSH AX
+   307 000001F7 E8(0000)            <1>     CALL line
+   308                                      
+   309 000001FA 58                          POP AX
+   310 000001FB 5D                          POP BP
+   311 000001FC C3                          RET
+   312                                  
+   313                                  ; POSES DE PASSOS (ANDANDO)
+   314                                  desenha_p1_andando:
+   315 000001FD 55                          PUSH BP
+   316 000001FE 89E5                        MOV BP, SP
+   317 00000200 50                          PUSH AX
+   318                                      
+   319 00000201 A0[0000]                    MOV AL, [cor_p1]
+   320 00000204 A2[0000]                    MOV byte [cor], AL
+   321                                      
+   322                                      CIRCLE [p1_x], 0, [p1_y], 0
+   323 00000207 A1[0000]            <1>     MOV AX, %1
+   324 0000020A 050000              <1>     ADD AX, %2
+   325 0000020D 50                  <1>     PUSH AX
+   326 0000020E A1[0200]            <1>     MOV AX, %3
+   327 00000211 050000              <1>     ADD AX, %4
+   328 00000214 50                  <1>     PUSH AX
+   329 00000215 B80A00              <1>     MOV AX, 10
+   330 00000218 50                  <1>     PUSH AX
+   331 00000219 E8(0000)            <1>     CALL circle
+   332                                      LINE [p1_x], 0, [p1_y], -10, 0, -35
+   333 0000021C A1[0000]            <1>     MOV AX, %1
+   334 0000021F 050000              <1>     ADD AX, %2
+   335 00000222 50                  <1>     PUSH AX
+   336 00000223 A1[0200]            <1>     MOV AX, %3
+   337 00000226 05F6FF              <1>     ADD AX, %4
+   338 00000229 50                  <1>     PUSH AX
+   339 0000022A A1[0000]            <1>     MOV AX, %1
+   340 0000022D 050000              <1>     ADD AX, %5
+   341 00000230 50                  <1>     PUSH AX
+   342 00000231 A1[0200]            <1>     MOV AX, %3
+   343 00000234 05DDFF              <1>     ADD AX, %6
+   344 00000237 50                  <1>     PUSH AX
+   345 00000238 E8(0000)            <1>     CALL line
+   346                                      LINE [p1_x], 0, [p1_y], -15, 5, -25   
+   347 0000023B A1[0000]            <1>     MOV AX, %1
+   348 0000023E 050000              <1>     ADD AX, %2
+   349 00000241 50                  <1>     PUSH AX
+   350 00000242 A1[0200]            <1>     MOV AX, %3
+   351 00000245 05F1FF              <1>     ADD AX, %4
+   352 00000248 50                  <1>     PUSH AX
+   353 00000249 A1[0000]            <1>     MOV AX, %1
+   354 0000024C 050500              <1>     ADD AX, %5
+   355 0000024F 50                  <1>     PUSH AX
+   356 00000250 A1[0200]            <1>     MOV AX, %3
+   357 00000253 05E7FF              <1>     ADD AX, %6
+   358 00000256 50                  <1>     PUSH AX
+   359 00000257 E8(0000)            <1>     CALL line
+   360                                      LINE [p1_x], 5, [p1_y], -25, 10, -5
+   361 0000025A A1[0000]            <1>     MOV AX, %1
+   362 0000025D 050500              <1>     ADD AX, %2
+   363 00000260 50                  <1>     PUSH AX
+   364 00000261 A1[0200]            <1>     MOV AX, %3
+   365 00000264 05E7FF              <1>     ADD AX, %4
+   366 00000267 50                  <1>     PUSH AX
+   367 00000268 A1[0000]            <1>     MOV AX, %1
+   368 0000026B 050A00              <1>     ADD AX, %5
+   369 0000026E 50                  <1>     PUSH AX
+   370 0000026F A1[0200]            <1>     MOV AX, %3
+   371 00000272 05FBFF              <1>     ADD AX, %6
+   372 00000275 50                  <1>     PUSH AX
+   373 00000276 E8(0000)            <1>     CALL line
+   374                                      LINE [p1_x], 0, [p1_y], -15, 10, -25  
+   375 00000279 A1[0000]            <1>     MOV AX, %1
+   376 0000027C 050000              <1>     ADD AX, %2
+   377 0000027F 50                  <1>     PUSH AX
+   378 00000280 A1[0200]            <1>     MOV AX, %3
+   379 00000283 05F1FF              <1>     ADD AX, %4
+   380 00000286 50                  <1>     PUSH AX
+   381 00000287 A1[0000]            <1>     MOV AX, %1
+   382 0000028A 050A00              <1>     ADD AX, %5
+   383 0000028D 50                  <1>     PUSH AX
+   384 0000028E A1[0200]            <1>     MOV AX, %3
+   385 00000291 05E7FF              <1>     ADD AX, %6
+   386 00000294 50                  <1>     PUSH AX
+   387 00000295 E8(0000)            <1>     CALL line
+   388                                      LINE [p1_x], 10, [p1_y], -25, 20, -5
+   389 00000298 A1[0000]            <1>     MOV AX, %1
+   390 0000029B 050A00              <1>     ADD AX, %2
+   391 0000029E 50                  <1>     PUSH AX
+   392 0000029F A1[0200]            <1>     MOV AX, %3
+   393 000002A2 05E7FF              <1>     ADD AX, %4
+   394 000002A5 50                  <1>     PUSH AX
+   395 000002A6 A1[0000]            <1>     MOV AX, %1
+   396 000002A9 051400              <1>     ADD AX, %5
+   397 000002AC 50                  <1>     PUSH AX
+   398 000002AD A1[0200]            <1>     MOV AX, %3
+   399 000002B0 05FBFF              <1>     ADD AX, %6
+   400 000002B3 50                  <1>     PUSH AX
+   401 000002B4 E8(0000)            <1>     CALL line
+   402                                      LINE [p1_x], 0, [p1_y], -35, -5, -65  ; Posição das pernas alterada para simular passo
+   403 000002B7 A1[0000]            <1>     MOV AX, %1
+   404 000002BA 050000              <1>     ADD AX, %2
+   405 000002BD 50                  <1>     PUSH AX
+   406 000002BE A1[0200]            <1>     MOV AX, %3
+   407 000002C1 05DDFF              <1>     ADD AX, %4
+   408 000002C4 50                  <1>     PUSH AX
+   409 000002C5 A1[0000]            <1>     MOV AX, %1
+   410 000002C8 05FBFF              <1>     ADD AX, %5
+   411 000002CB 50                  <1>     PUSH AX
+   412 000002CC A1[0200]            <1>     MOV AX, %3
+   413 000002CF 05BFFF              <1>     ADD AX, %6
+   414 000002D2 50                  <1>     PUSH AX
+   415 000002D3 E8(0000)            <1>     CALL line
+   416                                      LINE [p1_x], 0, [p1_y], -35, 5, -65
+   417 000002D6 A1[0000]            <1>     MOV AX, %1
+   418 000002D9 050000              <1>     ADD AX, %2
+   419 000002DC 50                  <1>     PUSH AX
+   420 000002DD A1[0200]            <1>     MOV AX, %3
+   421 000002E0 05DDFF              <1>     ADD AX, %4
+   422 000002E3 50                  <1>     PUSH AX
+   423 000002E4 A1[0000]            <1>     MOV AX, %1
+   424 000002E7 050500              <1>     ADD AX, %5
+   425 000002EA 50                  <1>     PUSH AX
+   426 000002EB A1[0200]            <1>     MOV AX, %3
+   427 000002EE 05BFFF              <1>     ADD AX, %6
+   428 000002F1 50                  <1>     PUSH AX
+   429 000002F2 E8(0000)            <1>     CALL line
+   430                                      
+   431 000002F5 58                          POP AX
+   432 000002F6 5D                          POP BP
+   433 000002F7 C3                          RET
+   434                                  
+   435                                  desenha_p2_andando:
+   436 000002F8 55                          PUSH BP
+   437 000002F9 89E5                        MOV BP, SP
+   438 000002FB 50                          PUSH AX
+   439                                      
+   440 000002FC A0[0000]                    MOV AL, [cor_p2]
+   441 000002FF A2[0000]                    MOV byte [cor], AL
+   442                                      
+   443                                      CIRCLE [p2_x], 0, [p2_y], 0
+   444 00000302 A1[0400]            <1>     MOV AX, %1
+   445 00000305 050000              <1>     ADD AX, %2
+   446 00000308 50                  <1>     PUSH AX
+   447 00000309 A1[0600]            <1>     MOV AX, %3
+   448 0000030C 050000              <1>     ADD AX, %4
+   449 0000030F 50                  <1>     PUSH AX
+   450 00000310 B80A00              <1>     MOV AX, 10
+   451 00000313 50                  <1>     PUSH AX
+   452 00000314 E8(0000)            <1>     CALL circle
+   453                                      LINE [p2_x], 0, [p2_y], -10, 0, -35
+   454 00000317 A1[0400]            <1>     MOV AX, %1
+   455 0000031A 050000              <1>     ADD AX, %2
+   456 0000031D 50                  <1>     PUSH AX
+   457 0000031E A1[0600]            <1>     MOV AX, %3
+   458 00000321 05F6FF              <1>     ADD AX, %4
+   459 00000324 50                  <1>     PUSH AX
+   460 00000325 A1[0400]            <1>     MOV AX, %1
+   461 00000328 050000              <1>     ADD AX, %5
+   462 0000032B 50                  <1>     PUSH AX
+   463 0000032C A1[0600]            <1>     MOV AX, %3
+   464 0000032F 05DDFF              <1>     ADD AX, %6
+   465 00000332 50                  <1>     PUSH AX
+   466 00000333 E8(0000)            <1>     CALL line
+   467                                      LINE [p2_x], 0, [p2_y], -15, -5, -25  
+   468 00000336 A1[0400]            <1>     MOV AX, %1
+   469 00000339 050000              <1>     ADD AX, %2
+   470 0000033C 50                  <1>     PUSH AX
+   471 0000033D A1[0600]            <1>     MOV AX, %3
+   472 00000340 05F1FF              <1>     ADD AX, %4
+   473 00000343 50                  <1>     PUSH AX
+   474 00000344 A1[0400]            <1>     MOV AX, %1
+   475 00000347 05FBFF              <1>     ADD AX, %5
+   476 0000034A 50                  <1>     PUSH AX
+   477 0000034B A1[0600]            <1>     MOV AX, %3
+   478 0000034E 05E7FF              <1>     ADD AX, %6
+   479 00000351 50                  <1>     PUSH AX
+   480 00000352 E8(0000)            <1>     CALL line
+   481                                      LINE [p2_x], -5, [p2_y], -25, -10, -5
+   482 00000355 A1[0400]            <1>     MOV AX, %1
+   483 00000358 05FBFF              <1>     ADD AX, %2
+   484 0000035B 50                  <1>     PUSH AX
+   485 0000035C A1[0600]            <1>     MOV AX, %3
+   486 0000035F 05E7FF              <1>     ADD AX, %4
+   487 00000362 50                  <1>     PUSH AX
+   488 00000363 A1[0400]            <1>     MOV AX, %1
+   489 00000366 05F6FF              <1>     ADD AX, %5
+   490 00000369 50                  <1>     PUSH AX
+   491 0000036A A1[0600]            <1>     MOV AX, %3
+   492 0000036D 05FBFF              <1>     ADD AX, %6
+   493 00000370 50                  <1>     PUSH AX
+   494 00000371 E8(0000)            <1>     CALL line
+   495                                      LINE [p2_x], 0, [p2_y], -15, -10, -25 
+   496 00000374 A1[0400]            <1>     MOV AX, %1
+   497 00000377 050000              <1>     ADD AX, %2
+   498 0000037A 50                  <1>     PUSH AX
+   499 0000037B A1[0600]            <1>     MOV AX, %3
+   500 0000037E 05F1FF              <1>     ADD AX, %4
+   501 00000381 50                  <1>     PUSH AX
+   502 00000382 A1[0400]            <1>     MOV AX, %1
+   503 00000385 05F6FF              <1>     ADD AX, %5
+   504 00000388 50                  <1>     PUSH AX
+   505 00000389 A1[0600]            <1>     MOV AX, %3
+   506 0000038C 05E7FF              <1>     ADD AX, %6
+   507 0000038F 50                  <1>     PUSH AX
+   508 00000390 E8(0000)            <1>     CALL line
+   509                                      LINE [p2_x], -10, [p2_y], -25, -20, -5
+   510 00000393 A1[0400]            <1>     MOV AX, %1
+   511 00000396 05F6FF              <1>     ADD AX, %2
+   512 00000399 50                  <1>     PUSH AX
+   513 0000039A A1[0600]            <1>     MOV AX, %3
+   514 0000039D 05E7FF              <1>     ADD AX, %4
+   515 000003A0 50                  <1>     PUSH AX
+   516 000003A1 A1[0400]            <1>     MOV AX, %1
+   517 000003A4 05ECFF              <1>     ADD AX, %5
+   518 000003A7 50                  <1>     PUSH AX
+   519 000003A8 A1[0600]            <1>     MOV AX, %3
+   520 000003AB 05FBFF              <1>     ADD AX, %6
+   521 000003AE 50                  <1>     PUSH AX
+   522 000003AF E8(0000)            <1>     CALL line
+   523                                      LINE [p2_x], 0, [p2_y], -35, -5, -65  
+   524 000003B2 A1[0400]            <1>     MOV AX, %1
+   525 000003B5 050000              <1>     ADD AX, %2
+   526 000003B8 50                  <1>     PUSH AX
+   527 000003B9 A1[0600]            <1>     MOV AX, %3
+   528 000003BC 05DDFF              <1>     ADD AX, %4
+   529 000003BF 50                  <1>     PUSH AX
+   530 000003C0 A1[0400]            <1>     MOV AX, %1
+   531 000003C3 05FBFF              <1>     ADD AX, %5
+   532 000003C6 50                  <1>     PUSH AX
+   533 000003C7 A1[0600]            <1>     MOV AX, %3
+   534 000003CA 05BFFF              <1>     ADD AX, %6
+   535 000003CD 50                  <1>     PUSH AX
+   536 000003CE E8(0000)            <1>     CALL line
+   537                                      LINE [p2_x], 0, [p2_y], -35, 5, -65
+   538 000003D1 A1[0400]            <1>     MOV AX, %1
+   539 000003D4 050000              <1>     ADD AX, %2
+   540 000003D7 50                  <1>     PUSH AX
+   541 000003D8 A1[0600]            <1>     MOV AX, %3
+   542 000003DB 05DDFF              <1>     ADD AX, %4
+   543 000003DE 50                  <1>     PUSH AX
+   544 000003DF A1[0400]            <1>     MOV AX, %1
+   545 000003E2 050500              <1>     ADD AX, %5
+   546 000003E5 50                  <1>     PUSH AX
+   547 000003E6 A1[0600]            <1>     MOV AX, %3
+   548 000003E9 05BFFF              <1>     ADD AX, %6
+   549 000003EC 50                  <1>     PUSH AX
+   550 000003ED E8(0000)            <1>     CALL line
+   551                                      
+   552 000003F0 58                          POP AX
+   553 000003F1 5D                          POP BP
+   554 000003F2 C3                          RET
+   555                                  
+   556                                  ; POSES AGACHADAS
+   557                                  desenha_p1_agachado:
+   558 000003F3 55                          PUSH BP
+   559 000003F4 89E5                        MOV BP, SP
+   560 000003F6 50                          PUSH AX
+   561                                      
+   562 000003F7 A0[0000]                    MOV AL, [cor_p1]
+   563 000003FA A2[0000]                    MOV byte [cor], AL
+   564                                      
+   565                                      CIRCLE [p1_x], 0, [p1_y], -25         ; Cabeça posicionada mais abaixo
+   566 000003FD A1[0000]            <1>     MOV AX, %1
+   567 00000400 050000              <1>     ADD AX, %2
+   568 00000403 50                  <1>     PUSH AX
+   569 00000404 A1[0200]            <1>     MOV AX, %3
+   570 00000407 05E7FF              <1>     ADD AX, %4
+   571 0000040A 50                  <1>     PUSH AX
+   572 0000040B B80A00              <1>     MOV AX, 10
+   573 0000040E 50                  <1>     PUSH AX
+   574 0000040F E8(0000)            <1>     CALL circle
+   575                                      LINE [p1_x], 0, [p1_y], -35, 0, -50   ; Tronco reduzido
+   576 00000412 A1[0000]            <1>     MOV AX, %1
+   577 00000415 050000              <1>     ADD AX, %2
+   578 00000418 50                  <1>     PUSH AX
+   579 00000419 A1[0200]            <1>     MOV AX, %3
+   580 0000041C 05DDFF              <1>     ADD AX, %4
+   581 0000041F 50                  <1>     PUSH AX
+   582 00000420 A1[0000]            <1>     MOV AX, %1
+   583 00000423 050000              <1>     ADD AX, %5
+   584 00000426 50                  <1>     PUSH AX
+   585 00000427 A1[0200]            <1>     MOV AX, %3
+   586 0000042A 05CEFF              <1>     ADD AX, %6
+   587 0000042D 50                  <1>     PUSH AX
+   588 0000042E E8(0000)            <1>     CALL line
+   589                                      LINE [p1_x], 0, [p1_y], -40, 5, -50   
+   590 00000431 A1[0000]            <1>     MOV AX, %1
+   591 00000434 050000              <1>     ADD AX, %2
+   592 00000437 50                  <1>     PUSH AX
+   593 00000438 A1[0200]            <1>     MOV AX, %3
+   594 0000043B 05D8FF              <1>     ADD AX, %4
+   595 0000043E 50                  <1>     PUSH AX
+   596 0000043F A1[0000]            <1>     MOV AX, %1
+   597 00000442 050500              <1>     ADD AX, %5
+   598 00000445 50                  <1>     PUSH AX
+   599 00000446 A1[0200]            <1>     MOV AX, %3
+   600 00000449 05CEFF              <1>     ADD AX, %6
+   601 0000044C 50                  <1>     PUSH AX
+   602 0000044D E8(0000)            <1>     CALL line
+   603                                      LINE [p1_x], 5, [p1_y], -50, 10, -30 
+   604 00000450 A1[0000]            <1>     MOV AX, %1
+   605 00000453 050500              <1>     ADD AX, %2
+   606 00000456 50                  <1>     PUSH AX
+   607 00000457 A1[0200]            <1>     MOV AX, %3
+   608 0000045A 05CEFF              <1>     ADD AX, %4
+   609 0000045D 50                  <1>     PUSH AX
+   610 0000045E A1[0000]            <1>     MOV AX, %1
+   611 00000461 050A00              <1>     ADD AX, %5
+   612 00000464 50                  <1>     PUSH AX
+   613 00000465 A1[0200]            <1>     MOV AX, %3
+   614 00000468 05E2FF              <1>     ADD AX, %6
+   615 0000046B 50                  <1>     PUSH AX
+   616 0000046C E8(0000)            <1>     CALL line
+   617                                      LINE [p1_x], 0, [p1_y], -40, 10, -50  
+   618 0000046F A1[0000]            <1>     MOV AX, %1
+   619 00000472 050000              <1>     ADD AX, %2
+   620 00000475 50                  <1>     PUSH AX
+   621 00000476 A1[0200]            <1>     MOV AX, %3
+   622 00000479 05D8FF              <1>     ADD AX, %4
+   623 0000047C 50                  <1>     PUSH AX
+   624 0000047D A1[0000]            <1>     MOV AX, %1
+   625 00000480 050A00              <1>     ADD AX, %5
+   626 00000483 50                  <1>     PUSH AX
+   627 00000484 A1[0200]            <1>     MOV AX, %3
+   628 00000487 05CEFF              <1>     ADD AX, %6
+   629 0000048A 50                  <1>     PUSH AX
+   630 0000048B E8(0000)            <1>     CALL line
+   631                                      LINE [p1_x], 10, [p1_y], -50, 20, -30
+   632 0000048E A1[0000]            <1>     MOV AX, %1
+   633 00000491 050A00              <1>     ADD AX, %2
+   634 00000494 50                  <1>     PUSH AX
+   635 00000495 A1[0200]            <1>     MOV AX, %3
+   636 00000498 05CEFF              <1>     ADD AX, %4
+   637 0000049B 50                  <1>     PUSH AX
+   638 0000049C A1[0000]            <1>     MOV AX, %1
+   639 0000049F 051400              <1>     ADD AX, %5
+   640 000004A2 50                  <1>     PUSH AX
+   641 000004A3 A1[0200]            <1>     MOV AX, %3
+   642 000004A6 05E2FF              <1>     ADD AX, %6
+   643 000004A9 50                  <1>     PUSH AX
+   644 000004AA E8(0000)            <1>     CALL line
+   645                                      LINE [p1_x], 0, [p1_y], -50, -20, -65 
+   646 000004AD A1[0000]            <1>     MOV AX, %1
+   647 000004B0 050000              <1>     ADD AX, %2
+   648 000004B3 50                  <1>     PUSH AX
+   649 000004B4 A1[0200]            <1>     MOV AX, %3
+   650 000004B7 05CEFF              <1>     ADD AX, %4
+   651 000004BA 50                  <1>     PUSH AX
+   652 000004BB A1[0000]            <1>     MOV AX, %1
+   653 000004BE 05ECFF              <1>     ADD AX, %5
+   654 000004C1 50                  <1>     PUSH AX
+   655 000004C2 A1[0200]            <1>     MOV AX, %3
+   656 000004C5 05BFFF              <1>     ADD AX, %6
+   657 000004C8 50                  <1>     PUSH AX
+   658 000004C9 E8(0000)            <1>     CALL line
+   659                                      LINE [p1_x], 0, [p1_y], -50, 20, -65
+   660 000004CC A1[0000]            <1>     MOV AX, %1
+   661 000004CF 050000              <1>     ADD AX, %2
+   662 000004D2 50                  <1>     PUSH AX
+   663 000004D3 A1[0200]            <1>     MOV AX, %3
+   664 000004D6 05CEFF              <1>     ADD AX, %4
+   665 000004D9 50                  <1>     PUSH AX
+   666 000004DA A1[0000]            <1>     MOV AX, %1
+   667 000004DD 051400              <1>     ADD AX, %5
+   668 000004E0 50                  <1>     PUSH AX
+   669 000004E1 A1[0200]            <1>     MOV AX, %3
+   670 000004E4 05BFFF              <1>     ADD AX, %6
+   671 000004E7 50                  <1>     PUSH AX
+   672 000004E8 E8(0000)            <1>     CALL line
+   673                                      
+   674 000004EB 58                          POP AX
+   675 000004EC 5D                          POP BP
+   676 000004ED C3                          RET
+   677                                  
+   678                                  desenha_p2_agachado:
+   679 000004EE 55                          PUSH BP
+   680 000004EF 89E5                        MOV BP, SP
+   681 000004F1 50                          PUSH AX
+   682                                      
+   683 000004F2 A0[0000]                    MOV AL, [cor_p2]
+   684 000004F5 A2[0000]                    MOV byte [cor], AL
+   685                                      
+   686                                      CIRCLE [p2_x], 0, [p2_y], -25
+   687 000004F8 A1[0400]            <1>     MOV AX, %1
+   688 000004FB 050000              <1>     ADD AX, %2
+   689 000004FE 50                  <1>     PUSH AX
+   690 000004FF A1[0600]            <1>     MOV AX, %3
+   691 00000502 05E7FF              <1>     ADD AX, %4
+   692 00000505 50                  <1>     PUSH AX
+   693 00000506 B80A00              <1>     MOV AX, 10
+   694 00000509 50                  <1>     PUSH AX
+   695 0000050A E8(0000)            <1>     CALL circle
+   696                                      LINE [p2_x], 0, [p2_y], -35, 0, -50
+   697 0000050D A1[0400]            <1>     MOV AX, %1
+   698 00000510 050000              <1>     ADD AX, %2
+   699 00000513 50                  <1>     PUSH AX
+   700 00000514 A1[0600]            <1>     MOV AX, %3
+   701 00000517 05DDFF              <1>     ADD AX, %4
+   702 0000051A 50                  <1>     PUSH AX
+   703 0000051B A1[0400]            <1>     MOV AX, %1
+   704 0000051E 050000              <1>     ADD AX, %5
+   705 00000521 50                  <1>     PUSH AX
+   706 00000522 A1[0600]            <1>     MOV AX, %3
+   707 00000525 05CEFF              <1>     ADD AX, %6
+   708 00000528 50                  <1>     PUSH AX
+   709 00000529 E8(0000)            <1>     CALL line
+   710                                      LINE [p2_x], 0, [p2_y], -40, -5, -50  
+   711 0000052C A1[0400]            <1>     MOV AX, %1
+   712 0000052F 050000              <1>     ADD AX, %2
+   713 00000532 50                  <1>     PUSH AX
+   714 00000533 A1[0600]            <1>     MOV AX, %3
+   715 00000536 05D8FF              <1>     ADD AX, %4
+   716 00000539 50                  <1>     PUSH AX
+   717 0000053A A1[0400]            <1>     MOV AX, %1
+   718 0000053D 05FBFF              <1>     ADD AX, %5
+   719 00000540 50                  <1>     PUSH AX
+   720 00000541 A1[0600]            <1>     MOV AX, %3
+   721 00000544 05CEFF              <1>     ADD AX, %6
+   722 00000547 50                  <1>     PUSH AX
+   723 00000548 E8(0000)            <1>     CALL line
+   724                                      LINE [p2_x], -5, [p2_y], -50, -10, -30 
+   725 0000054B A1[0400]            <1>     MOV AX, %1
+   726 0000054E 05FBFF              <1>     ADD AX, %2
+   727 00000551 50                  <1>     PUSH AX
+   728 00000552 A1[0600]            <1>     MOV AX, %3
+   729 00000555 05CEFF              <1>     ADD AX, %4
+   730 00000558 50                  <1>     PUSH AX
+   731 00000559 A1[0400]            <1>     MOV AX, %1
+   732 0000055C 05F6FF              <1>     ADD AX, %5
+   733 0000055F 50                  <1>     PUSH AX
+   734 00000560 A1[0600]            <1>     MOV AX, %3
+   735 00000563 05E2FF              <1>     ADD AX, %6
+   736 00000566 50                  <1>     PUSH AX
+   737 00000567 E8(0000)            <1>     CALL line
+   738                                      LINE [p2_x], 0, [p2_y], -40, -10, -50 
+   739 0000056A A1[0400]            <1>     MOV AX, %1
+   740 0000056D 050000              <1>     ADD AX, %2
+   741 00000570 50                  <1>     PUSH AX
+   742 00000571 A1[0600]            <1>     MOV AX, %3
+   743 00000574 05D8FF              <1>     ADD AX, %4
+   744 00000577 50                  <1>     PUSH AX
+   745 00000578 A1[0400]            <1>     MOV AX, %1
+   746 0000057B 05F6FF              <1>     ADD AX, %5
+   747 0000057E 50                  <1>     PUSH AX
+   748 0000057F A1[0600]            <1>     MOV AX, %3
+   749 00000582 05CEFF              <1>     ADD AX, %6
+   750 00000585 50                  <1>     PUSH AX
+   751 00000586 E8(0000)            <1>     CALL line
+   752                                      LINE [p2_x], -10, [p2_y], -50, -20, -30
+   753 00000589 A1[0400]            <1>     MOV AX, %1
+   754 0000058C 05F6FF              <1>     ADD AX, %2
+   755 0000058F 50                  <1>     PUSH AX
+   756 00000590 A1[0600]            <1>     MOV AX, %3
+   757 00000593 05CEFF              <1>     ADD AX, %4
+   758 00000596 50                  <1>     PUSH AX
+   759 00000597 A1[0400]            <1>     MOV AX, %1
+   760 0000059A 05ECFF              <1>     ADD AX, %5
+   761 0000059D 50                  <1>     PUSH AX
+   762 0000059E A1[0600]            <1>     MOV AX, %3
+   763 000005A1 05E2FF              <1>     ADD AX, %6
+   764 000005A4 50                  <1>     PUSH AX
+   765 000005A5 E8(0000)            <1>     CALL line
+   766                                      LINE [p2_x], 0, [p2_y], -50, -20, -65 
+   767 000005A8 A1[0400]            <1>     MOV AX, %1
+   768 000005AB 050000              <1>     ADD AX, %2
+   769 000005AE 50                  <1>     PUSH AX
+   770 000005AF A1[0600]            <1>     MOV AX, %3
+   771 000005B2 05CEFF              <1>     ADD AX, %4
+   772 000005B5 50                  <1>     PUSH AX
+   773 000005B6 A1[0400]            <1>     MOV AX, %1
+   774 000005B9 05ECFF              <1>     ADD AX, %5
+   775 000005BC 50                  <1>     PUSH AX
+   776 000005BD A1[0600]            <1>     MOV AX, %3
+   777 000005C0 05BFFF              <1>     ADD AX, %6
+   778 000005C3 50                  <1>     PUSH AX
+   779 000005C4 E8(0000)            <1>     CALL line
+   780                                      LINE [p2_x], 0, [p2_y], -50, 20, -65
+   781 000005C7 A1[0400]            <1>     MOV AX, %1
+   782 000005CA 050000              <1>     ADD AX, %2
+   783 000005CD 50                  <1>     PUSH AX
+   784 000005CE A1[0600]            <1>     MOV AX, %3
+   785 000005D1 05CEFF              <1>     ADD AX, %4
+   786 000005D4 50                  <1>     PUSH AX
+   787 000005D5 A1[0400]            <1>     MOV AX, %1
+   788 000005D8 051400              <1>     ADD AX, %5
+   789 000005DB 50                  <1>     PUSH AX
+   790 000005DC A1[0600]            <1>     MOV AX, %3
+   791 000005DF 05BFFF              <1>     ADD AX, %6
+   792 000005E2 50                  <1>     PUSH AX
+   793 000005E3 E8(0000)            <1>     CALL line
+   794                                      
+   795 000005E6 58                          POP AX
+   796 000005E7 5D                          POP BP
+   797 000005E8 C3                          RET
+   798                                  
+   799                                  ; ROTINAS DE SOCO
+   800                                  desenha_soco_p1:
+   801 000005E9 55                          PUSH BP
+   802 000005EA 89E5                        MOV BP, SP
+   803 000005EC 50                          PUSH AX
+   804                                      
+   805 000005ED A0[0000]                    MOV AL, [cor_p1]
+   806 000005F0 A2[0000]                    MOV byte [cor], AL
+   807                                      
+   808                                      CIRCLE [p1_x], 0, [p1_y], 0
+   809 000005F3 A1[0000]            <1>     MOV AX, %1
+   810 000005F6 050000              <1>     ADD AX, %2
+   811 000005F9 50                  <1>     PUSH AX
+   812 000005FA A1[0200]            <1>     MOV AX, %3
+   813 000005FD 050000              <1>     ADD AX, %4
+   814 00000600 50                  <1>     PUSH AX
+   815 00000601 B80A00              <1>     MOV AX, 10
+   816 00000604 50                  <1>     PUSH AX
+   817 00000605 E8(0000)            <1>     CALL circle
+   818                                      LINE [p1_x], 0, [p1_y], -10, 0, -35
+   819 00000608 A1[0000]            <1>     MOV AX, %1
+   820 0000060B 050000              <1>     ADD AX, %2
+   821 0000060E 50                  <1>     PUSH AX
+   822 0000060F A1[0200]            <1>     MOV AX, %3
+   823 00000612 05F6FF              <1>     ADD AX, %4
+   824 00000615 50                  <1>     PUSH AX
+   825 00000616 A1[0000]            <1>     MOV AX, %1
+   826 00000619 050000              <1>     ADD AX, %5
+   827 0000061C 50                  <1>     PUSH AX
+   828 0000061D A1[0200]            <1>     MOV AX, %3
+   829 00000620 05DDFF              <1>     ADD AX, %6
+   830 00000623 50                  <1>     PUSH AX
+   831 00000624 E8(0000)            <1>     CALL line
+   832                                      LINE [p1_x], 0, [p1_y], -15, 5, -25   
+   833 00000627 A1[0000]            <1>     MOV AX, %1
+   834 0000062A 050000              <1>     ADD AX, %2
+   835 0000062D 50                  <1>     PUSH AX
+   836 0000062E A1[0200]            <1>     MOV AX, %3
+   837 00000631 05F1FF              <1>     ADD AX, %4
+   838 00000634 50                  <1>     PUSH AX
+   839 00000635 A1[0000]            <1>     MOV AX, %1
+   840 00000638 050500              <1>     ADD AX, %5
+   841 0000063B 50                  <1>     PUSH AX
+   842 0000063C A1[0200]            <1>     MOV AX, %3
+   843 0000063F 05E7FF              <1>     ADD AX, %6
+   844 00000642 50                  <1>     PUSH AX
+   845 00000643 E8(0000)            <1>     CALL line
+   846                                      LINE [p1_x], 5, [p1_y], -25, 10, -5
+   847 00000646 A1[0000]            <1>     MOV AX, %1
+   848 00000649 050500              <1>     ADD AX, %2
+   849 0000064C 50                  <1>     PUSH AX
+   850 0000064D A1[0200]            <1>     MOV AX, %3
+   851 00000650 05E7FF              <1>     ADD AX, %4
+   852 00000653 50                  <1>     PUSH AX
+   853 00000654 A1[0000]            <1>     MOV AX, %1
+   854 00000657 050A00              <1>     ADD AX, %5
+   855 0000065A 50                  <1>     PUSH AX
+   856 0000065B A1[0200]            <1>     MOV AX, %3
+   857 0000065E 05FBFF              <1>     ADD AX, %6
+   858 00000661 50                  <1>     PUSH AX
+   859 00000662 E8(0000)            <1>     CALL line
+   860                                      LINE [p1_x], 0, [p1_y], -15, 40, -15  ; Braço esticado para a frente (Ataque)
+   861 00000665 A1[0000]            <1>     MOV AX, %1
+   862 00000668 050000              <1>     ADD AX, %2
+   863 0000066B 50                  <1>     PUSH AX
+   864 0000066C A1[0200]            <1>     MOV AX, %3
+   865 0000066F 05F1FF              <1>     ADD AX, %4
+   866 00000672 50                  <1>     PUSH AX
+   867 00000673 A1[0000]            <1>     MOV AX, %1
+   868 00000676 052800              <1>     ADD AX, %5
+   869 00000679 50                  <1>     PUSH AX
+   870 0000067A A1[0200]            <1>     MOV AX, %3
+   871 0000067D 05F1FF              <1>     ADD AX, %6
+   872 00000680 50                  <1>     PUSH AX
+   873 00000681 E8(0000)            <1>     CALL line
+   874                                      LINE [p1_x], 0, [p1_y], -35, -15, -65 
+   875 00000684 A1[0000]            <1>     MOV AX, %1
+   876 00000687 050000              <1>     ADD AX, %2
+   877 0000068A 50                  <1>     PUSH AX
+   878 0000068B A1[0200]            <1>     MOV AX, %3
+   879 0000068E 05DDFF              <1>     ADD AX, %4
+   880 00000691 50                  <1>     PUSH AX
+   881 00000692 A1[0000]            <1>     MOV AX, %1
+   882 00000695 05F1FF              <1>     ADD AX, %5
+   883 00000698 50                  <1>     PUSH AX
+   884 00000699 A1[0200]            <1>     MOV AX, %3
+   885 0000069C 05BFFF              <1>     ADD AX, %6
+   886 0000069F 50                  <1>     PUSH AX
+   887 000006A0 E8(0000)            <1>     CALL line
+   888                                      LINE [p1_x], 0, [p1_y], -35, 15, -65
+   889 000006A3 A1[0000]            <1>     MOV AX, %1
+   890 000006A6 050000              <1>     ADD AX, %2
+   891 000006A9 50                  <1>     PUSH AX
+   892 000006AA A1[0200]            <1>     MOV AX, %3
+   893 000006AD 05DDFF              <1>     ADD AX, %4
+   894 000006B0 50                  <1>     PUSH AX
+   895 000006B1 A1[0000]            <1>     MOV AX, %1
+   896 000006B4 050F00              <1>     ADD AX, %5
+   897 000006B7 50                  <1>     PUSH AX
+   898 000006B8 A1[0200]            <1>     MOV AX, %3
+   899 000006BB 05BFFF              <1>     ADD AX, %6
+   900 000006BE 50                  <1>     PUSH AX
+   901 000006BF E8(0000)            <1>     CALL line
+   902                                      
+   903 000006C2 58                          POP AX
+   904 000006C3 5D                          POP BP
+   905 000006C4 C3                          RET
+   906                                  
+   907                                  desenha_soco_p2:
+   908 000006C5 55                          PUSH BP
+   909 000006C6 89E5                        MOV BP, SP
+   910 000006C8 50                          PUSH AX
+   911                                      
+   912 000006C9 A0[0000]                    MOV AL, [cor_p2]
+   913 000006CC A2[0000]                    MOV byte [cor], AL
+   914                                      
+   915                                      CIRCLE [p2_x], 0, [p2_y], 0
+   916 000006CF A1[0400]            <1>     MOV AX, %1
+   917 000006D2 050000              <1>     ADD AX, %2
+   918 000006D5 50                  <1>     PUSH AX
+   919 000006D6 A1[0600]            <1>     MOV AX, %3
+   920 000006D9 050000              <1>     ADD AX, %4
+   921 000006DC 50                  <1>     PUSH AX
+   922 000006DD B80A00              <1>     MOV AX, 10
+   923 000006E0 50                  <1>     PUSH AX
+   924 000006E1 E8(0000)            <1>     CALL circle
+   925                                      LINE [p2_x], 0, [p2_y], -10, 0, -35
+   926 000006E4 A1[0400]            <1>     MOV AX, %1
+   927 000006E7 050000              <1>     ADD AX, %2
+   928 000006EA 50                  <1>     PUSH AX
+   929 000006EB A1[0600]            <1>     MOV AX, %3
+   930 000006EE 05F6FF              <1>     ADD AX, %4
+   931 000006F1 50                  <1>     PUSH AX
+   932 000006F2 A1[0400]            <1>     MOV AX, %1
+   933 000006F5 050000              <1>     ADD AX, %5
+   934 000006F8 50                  <1>     PUSH AX
+   935 000006F9 A1[0600]            <1>     MOV AX, %3
+   936 000006FC 05DDFF              <1>     ADD AX, %6
+   937 000006FF 50                  <1>     PUSH AX
+   938 00000700 E8(0000)            <1>     CALL line
+   939                                      LINE [p2_x], 0, [p2_y], -15, -5, -25  
+   940 00000703 A1[0400]            <1>     MOV AX, %1
+   941 00000706 050000              <1>     ADD AX, %2
+   942 00000709 50                  <1>     PUSH AX
+   943 0000070A A1[0600]            <1>     MOV AX, %3
+   944 0000070D 05F1FF              <1>     ADD AX, %4
+   945 00000710 50                  <1>     PUSH AX
+   946 00000711 A1[0400]            <1>     MOV AX, %1
+   947 00000714 05FBFF              <1>     ADD AX, %5
+   948 00000717 50                  <1>     PUSH AX
+   949 00000718 A1[0600]            <1>     MOV AX, %3
+   950 0000071B 05E7FF              <1>     ADD AX, %6
+   951 0000071E 50                  <1>     PUSH AX
+   952 0000071F E8(0000)            <1>     CALL line
+   953                                      LINE [p2_x], -5, [p2_y], -25, -10, -5
+   954 00000722 A1[0400]            <1>     MOV AX, %1
+   955 00000725 05FBFF              <1>     ADD AX, %2
+   956 00000728 50                  <1>     PUSH AX
+   957 00000729 A1[0600]            <1>     MOV AX, %3
+   958 0000072C 05E7FF              <1>     ADD AX, %4
+   959 0000072F 50                  <1>     PUSH AX
+   960 00000730 A1[0400]            <1>     MOV AX, %1
+   961 00000733 05F6FF              <1>     ADD AX, %5
+   962 00000736 50                  <1>     PUSH AX
+   963 00000737 A1[0600]            <1>     MOV AX, %3
+   964 0000073A 05FBFF              <1>     ADD AX, %6
+   965 0000073D 50                  <1>     PUSH AX
+   966 0000073E E8(0000)            <1>     CALL line
+   967                                      LINE [p2_x], 0, [p2_y], -15, -40, -15 ; Braço esticado para a frente (Ataque)
+   968 00000741 A1[0400]            <1>     MOV AX, %1
+   969 00000744 050000              <1>     ADD AX, %2
+   970 00000747 50                  <1>     PUSH AX
+   971 00000748 A1[0600]            <1>     MOV AX, %3
+   972 0000074B 05F1FF              <1>     ADD AX, %4
+   973 0000074E 50                  <1>     PUSH AX
+   974 0000074F A1[0400]            <1>     MOV AX, %1
+   975 00000752 05D8FF              <1>     ADD AX, %5
+   976 00000755 50                  <1>     PUSH AX
+   977 00000756 A1[0600]            <1>     MOV AX, %3
+   978 00000759 05F1FF              <1>     ADD AX, %6
+   979 0000075C 50                  <1>     PUSH AX
+   980 0000075D E8(0000)            <1>     CALL line
+   981                                      LINE [p2_x], 0, [p2_y], -35, -15, -65
+   982 00000760 A1[0400]            <1>     MOV AX, %1
+   983 00000763 050000              <1>     ADD AX, %2
+   984 00000766 50                  <1>     PUSH AX
+   985 00000767 A1[0600]            <1>     MOV AX, %3
+   986 0000076A 05DDFF              <1>     ADD AX, %4
+   987 0000076D 50                  <1>     PUSH AX
+   988 0000076E A1[0400]            <1>     MOV AX, %1
+   989 00000771 05F1FF              <1>     ADD AX, %5
+   990 00000774 50                  <1>     PUSH AX
+   991 00000775 A1[0600]            <1>     MOV AX, %3
+   992 00000778 05BFFF              <1>     ADD AX, %6
+   993 0000077B 50                  <1>     PUSH AX
+   994 0000077C E8(0000)            <1>     CALL line
+   995                                      LINE [p2_x], 0, [p2_y], -35, 15, -65
+   996 0000077F A1[0400]            <1>     MOV AX, %1
+   997 00000782 050000              <1>     ADD AX, %2
+   998 00000785 50                  <1>     PUSH AX
+   999 00000786 A1[0600]            <1>     MOV AX, %3
+  1000 00000789 05DDFF              <1>     ADD AX, %4
+  1001 0000078C 50                  <1>     PUSH AX
+  1002 0000078D A1[0400]            <1>     MOV AX, %1
+  1003 00000790 050F00              <1>     ADD AX, %5
+  1004 00000793 50                  <1>     PUSH AX
+  1005 00000794 A1[0600]            <1>     MOV AX, %3
+  1006 00000797 05BFFF              <1>     ADD AX, %6
+  1007 0000079A 50                  <1>     PUSH AX
+  1008 0000079B E8(0000)            <1>     CALL line
+  1009                                      
+  1010 0000079E 58                          POP AX
+  1011 0000079F 5D                          POP BP
+  1012 000007A0 C3                          RET
+  1013                                  
+  1014                                  ; ROTINAS DE CHUTE
+  1015                                  desenha_chute_p1:
+  1016 000007A1 55                          PUSH BP
+  1017 000007A2 89E5                        MOV BP, SP
+  1018 000007A4 50                          PUSH AX
+  1019                                      
+  1020 000007A5 A0[0000]                    MOV AL, [cor_p1]
+  1021 000007A8 A2[0000]                    MOV byte [cor], AL
+  1022                                      
+  1023                                      CIRCLE [p1_x], 0, [p1_y], 0
+  1024 000007AB A1[0000]            <1>     MOV AX, %1
+  1025 000007AE 050000              <1>     ADD AX, %2
+  1026 000007B1 50                  <1>     PUSH AX
+  1027 000007B2 A1[0200]            <1>     MOV AX, %3
+  1028 000007B5 050000              <1>     ADD AX, %4
+  1029 000007B8 50                  <1>     PUSH AX
+  1030 000007B9 B80A00              <1>     MOV AX, 10
+  1031 000007BC 50                  <1>     PUSH AX
+  1032 000007BD E8(0000)            <1>     CALL circle
+  1033                                      LINE [p1_x], 0, [p1_y], -10, 0, -35
+  1034 000007C0 A1[0000]            <1>     MOV AX, %1
+  1035 000007C3 050000              <1>     ADD AX, %2
+  1036 000007C6 50                  <1>     PUSH AX
+  1037 000007C7 A1[0200]            <1>     MOV AX, %3
+  1038 000007CA 05F6FF              <1>     ADD AX, %4
+  1039 000007CD 50                  <1>     PUSH AX
+  1040 000007CE A1[0000]            <1>     MOV AX, %1
+  1041 000007D1 050000              <1>     ADD AX, %5
+  1042 000007D4 50                  <1>     PUSH AX
+  1043 000007D5 A1[0200]            <1>     MOV AX, %3
+  1044 000007D8 05DDFF              <1>     ADD AX, %6
+  1045 000007DB 50                  <1>     PUSH AX
+  1046 000007DC E8(0000)            <1>     CALL line
+  1047                                      LINE [p1_x], 0, [p1_y], -15, 5, -25   
+  1048 000007DF A1[0000]            <1>     MOV AX, %1
+  1049 000007E2 050000              <1>     ADD AX, %2
+  1050 000007E5 50                  <1>     PUSH AX
+  1051 000007E6 A1[0200]            <1>     MOV AX, %3
+  1052 000007E9 05F1FF              <1>     ADD AX, %4
+  1053 000007EC 50                  <1>     PUSH AX
+  1054 000007ED A1[0000]            <1>     MOV AX, %1
+  1055 000007F0 050500              <1>     ADD AX, %5
+  1056 000007F3 50                  <1>     PUSH AX
+  1057 000007F4 A1[0200]            <1>     MOV AX, %3
+  1058 000007F7 05E7FF              <1>     ADD AX, %6
+  1059 000007FA 50                  <1>     PUSH AX
+  1060 000007FB E8(0000)            <1>     CALL line
+  1061                                      LINE [p1_x], 5, [p1_y], -25, 10, -5
+  1062 000007FE A1[0000]            <1>     MOV AX, %1
+  1063 00000801 050500              <1>     ADD AX, %2
+  1064 00000804 50                  <1>     PUSH AX
+  1065 00000805 A1[0200]            <1>     MOV AX, %3
+  1066 00000808 05E7FF              <1>     ADD AX, %4
+  1067 0000080B 50                  <1>     PUSH AX
+  1068 0000080C A1[0000]            <1>     MOV AX, %1
+  1069 0000080F 050A00              <1>     ADD AX, %5
+  1070 00000812 50                  <1>     PUSH AX
+  1071 00000813 A1[0200]            <1>     MOV AX, %3
+  1072 00000816 05FBFF              <1>     ADD AX, %6
+  1073 00000819 50                  <1>     PUSH AX
+  1074 0000081A E8(0000)            <1>     CALL line
+  1075                                      LINE [p1_x], 0, [p1_y], -15, 10, -25  
+  1076 0000081D A1[0000]            <1>     MOV AX, %1
+  1077 00000820 050000              <1>     ADD AX, %2
+  1078 00000823 50                  <1>     PUSH AX
+  1079 00000824 A1[0200]            <1>     MOV AX, %3
+  1080 00000827 05F1FF              <1>     ADD AX, %4
+  1081 0000082A 50                  <1>     PUSH AX
+  1082 0000082B A1[0000]            <1>     MOV AX, %1
+  1083 0000082E 050A00              <1>     ADD AX, %5
+  1084 00000831 50                  <1>     PUSH AX
+  1085 00000832 A1[0200]            <1>     MOV AX, %3
+  1086 00000835 05E7FF              <1>     ADD AX, %6
+  1087 00000838 50                  <1>     PUSH AX
+  1088 00000839 E8(0000)            <1>     CALL line
+  1089                                      LINE [p1_x], 10, [p1_y], -25, 20, -5
+  1090 0000083C A1[0000]            <1>     MOV AX, %1
+  1091 0000083F 050A00              <1>     ADD AX, %2
+  1092 00000842 50                  <1>     PUSH AX
+  1093 00000843 A1[0200]            <1>     MOV AX, %3
+  1094 00000846 05E7FF              <1>     ADD AX, %4
+  1095 00000849 50                  <1>     PUSH AX
+  1096 0000084A A1[0000]            <1>     MOV AX, %1
+  1097 0000084D 051400              <1>     ADD AX, %5
+  1098 00000850 50                  <1>     PUSH AX
+  1099 00000851 A1[0200]            <1>     MOV AX, %3
+  1100 00000854 05FBFF              <1>     ADD AX, %6
+  1101 00000857 50                  <1>     PUSH AX
+  1102 00000858 E8(0000)            <1>     CALL line
+  1103                                      LINE [p1_x], 0, [p1_y], -35, -15, -65 
+  1104 0000085B A1[0000]            <1>     MOV AX, %1
+  1105 0000085E 050000              <1>     ADD AX, %2
+  1106 00000861 50                  <1>     PUSH AX
+  1107 00000862 A1[0200]            <1>     MOV AX, %3
+  1108 00000865 05DDFF              <1>     ADD AX, %4
+  1109 00000868 50                  <1>     PUSH AX
+  1110 00000869 A1[0000]            <1>     MOV AX, %1
+  1111 0000086C 05F1FF              <1>     ADD AX, %5
+  1112 0000086F 50                  <1>     PUSH AX
+  1113 00000870 A1[0200]            <1>     MOV AX, %3
+  1114 00000873 05BFFF              <1>     ADD AX, %6
+  1115 00000876 50                  <1>     PUSH AX
+  1116 00000877 E8(0000)            <1>     CALL line
+  1117                                      LINE [p1_x], 0, [p1_y], -35, 40, -35  ; Perna esticada para a frente (Chute)
+  1118 0000087A A1[0000]            <1>     MOV AX, %1
+  1119 0000087D 050000              <1>     ADD AX, %2
+  1120 00000880 50                  <1>     PUSH AX
+  1121 00000881 A1[0200]            <1>     MOV AX, %3
+  1122 00000884 05DDFF              <1>     ADD AX, %4
+  1123 00000887 50                  <1>     PUSH AX
+  1124 00000888 A1[0000]            <1>     MOV AX, %1
+  1125 0000088B 052800              <1>     ADD AX, %5
+  1126 0000088E 50                  <1>     PUSH AX
+  1127 0000088F A1[0200]            <1>     MOV AX, %3
+  1128 00000892 05DDFF              <1>     ADD AX, %6
+  1129 00000895 50                  <1>     PUSH AX
+  1130 00000896 E8(0000)            <1>     CALL line
+  1131                                      
+  1132 00000899 58                          POP AX
+  1133 0000089A 5D                          POP BP
+  1134 0000089B C3                          RET
+  1135                                  
+  1136                                  desenha_chute_p2:
+  1137 0000089C 55                          PUSH BP
+  1138 0000089D 89E5                        MOV BP, SP
+  1139 0000089F 50                          PUSH AX
+  1140                                      
+  1141 000008A0 A0[0000]                    MOV AL, [cor_p2]
+  1142 000008A3 A2[0000]                    MOV byte [cor], AL
+  1143                                      
+  1144                                      CIRCLE [p2_x], 0, [p2_y], 0
+  1145 000008A6 A1[0400]            <1>     MOV AX, %1
+  1146 000008A9 050000              <1>     ADD AX, %2
+  1147 000008AC 50                  <1>     PUSH AX
+  1148 000008AD A1[0600]            <1>     MOV AX, %3
+  1149 000008B0 050000              <1>     ADD AX, %4
+  1150 000008B3 50                  <1>     PUSH AX
+  1151 000008B4 B80A00              <1>     MOV AX, 10
+  1152 000008B7 50                  <1>     PUSH AX
+  1153 000008B8 E8(0000)            <1>     CALL circle
+  1154                                      LINE [p2_x], 0, [p2_y], -10, 0, -35
+  1155 000008BB A1[0400]            <1>     MOV AX, %1
+  1156 000008BE 050000              <1>     ADD AX, %2
+  1157 000008C1 50                  <1>     PUSH AX
+  1158 000008C2 A1[0600]            <1>     MOV AX, %3
+  1159 000008C5 05F6FF              <1>     ADD AX, %4
+  1160 000008C8 50                  <1>     PUSH AX
+  1161 000008C9 A1[0400]            <1>     MOV AX, %1
+  1162 000008CC 050000              <1>     ADD AX, %5
+  1163 000008CF 50                  <1>     PUSH AX
+  1164 000008D0 A1[0600]            <1>     MOV AX, %3
+  1165 000008D3 05DDFF              <1>     ADD AX, %6
+  1166 000008D6 50                  <1>     PUSH AX
+  1167 000008D7 E8(0000)            <1>     CALL line
+  1168                                      LINE [p2_x], 0, [p2_y], -15, -5, -25  
+  1169 000008DA A1[0400]            <1>     MOV AX, %1
+  1170 000008DD 050000              <1>     ADD AX, %2
+  1171 000008E0 50                  <1>     PUSH AX
+  1172 000008E1 A1[0600]            <1>     MOV AX, %3
+  1173 000008E4 05F1FF              <1>     ADD AX, %4
+  1174 000008E7 50                  <1>     PUSH AX
+  1175 000008E8 A1[0400]            <1>     MOV AX, %1
+  1176 000008EB 05FBFF              <1>     ADD AX, %5
+  1177 000008EE 50                  <1>     PUSH AX
+  1178 000008EF A1[0600]            <1>     MOV AX, %3
+  1179 000008F2 05E7FF              <1>     ADD AX, %6
+  1180 000008F5 50                  <1>     PUSH AX
+  1181 000008F6 E8(0000)            <1>     CALL line
+  1182                                      LINE [p2_x], -5, [p2_y], -25, -10, -5
+  1183 000008F9 A1[0400]            <1>     MOV AX, %1
+  1184 000008FC 05FBFF              <1>     ADD AX, %2
+  1185 000008FF 50                  <1>     PUSH AX
+  1186 00000900 A1[0600]            <1>     MOV AX, %3
+  1187 00000903 05E7FF              <1>     ADD AX, %4
+  1188 00000906 50                  <1>     PUSH AX
+  1189 00000907 A1[0400]            <1>     MOV AX, %1
+  1190 0000090A 05F6FF              <1>     ADD AX, %5
+  1191 0000090D 50                  <1>     PUSH AX
+  1192 0000090E A1[0600]            <1>     MOV AX, %3
+  1193 00000911 05FBFF              <1>     ADD AX, %6
+  1194 00000914 50                  <1>     PUSH AX
+  1195 00000915 E8(0000)            <1>     CALL line
+  1196                                      LINE [p2_x], 0, [p2_y], -15, -10, -25 
+  1197 00000918 A1[0400]            <1>     MOV AX, %1
+  1198 0000091B 050000              <1>     ADD AX, %2
+  1199 0000091E 50                  <1>     PUSH AX
+  1200 0000091F A1[0600]            <1>     MOV AX, %3
+  1201 00000922 05F1FF              <1>     ADD AX, %4
+  1202 00000925 50                  <1>     PUSH AX
+  1203 00000926 A1[0400]            <1>     MOV AX, %1
+  1204 00000929 05F6FF              <1>     ADD AX, %5
+  1205 0000092C 50                  <1>     PUSH AX
+  1206 0000092D A1[0600]            <1>     MOV AX, %3
+  1207 00000930 05E7FF              <1>     ADD AX, %6
+  1208 00000933 50                  <1>     PUSH AX
+  1209 00000934 E8(0000)            <1>     CALL line
+  1210                                      LINE [p2_x], -10, [p2_y], -25, -20, -5
+  1211 00000937 A1[0400]            <1>     MOV AX, %1
+  1212 0000093A 05F6FF              <1>     ADD AX, %2
+  1213 0000093D 50                  <1>     PUSH AX
+  1214 0000093E A1[0600]            <1>     MOV AX, %3
+  1215 00000941 05E7FF              <1>     ADD AX, %4
+  1216 00000944 50                  <1>     PUSH AX
+  1217 00000945 A1[0400]            <1>     MOV AX, %1
+  1218 00000948 05ECFF              <1>     ADD AX, %5
+  1219 0000094B 50                  <1>     PUSH AX
+  1220 0000094C A1[0600]            <1>     MOV AX, %3
+  1221 0000094F 05FBFF              <1>     ADD AX, %6
+  1222 00000952 50                  <1>     PUSH AX
+  1223 00000953 E8(0000)            <1>     CALL line
+  1224                                      LINE [p2_x], 0, [p2_y], -35, -15, -65
+  1225 00000956 A1[0400]            <1>     MOV AX, %1
+  1226 00000959 050000              <1>     ADD AX, %2
+  1227 0000095C 50                  <1>     PUSH AX
+  1228 0000095D A1[0600]            <1>     MOV AX, %3
+  1229 00000960 05DDFF              <1>     ADD AX, %4
+  1230 00000963 50                  <1>     PUSH AX
+  1231 00000964 A1[0400]            <1>     MOV AX, %1
+  1232 00000967 05F1FF              <1>     ADD AX, %5
+  1233 0000096A 50                  <1>     PUSH AX
+  1234 0000096B A1[0600]            <1>     MOV AX, %3
+  1235 0000096E 05BFFF              <1>     ADD AX, %6
+  1236 00000971 50                  <1>     PUSH AX
+  1237 00000972 E8(0000)            <1>     CALL line
+  1238                                      LINE [p2_x], 0, [p2_y], -35, -40, -35 ; Perna esticada para a frente (Chute)
+  1239 00000975 A1[0400]            <1>     MOV AX, %1
+  1240 00000978 050000              <1>     ADD AX, %2
+  1241 0000097B 50                  <1>     PUSH AX
+  1242 0000097C A1[0600]            <1>     MOV AX, %3
+  1243 0000097F 05DDFF              <1>     ADD AX, %4
+  1244 00000982 50                  <1>     PUSH AX
+  1245 00000983 A1[0400]            <1>     MOV AX, %1
+  1246 00000986 05D8FF              <1>     ADD AX, %5
+  1247 00000989 50                  <1>     PUSH AX
+  1248 0000098A A1[0600]            <1>     MOV AX, %3
+  1249 0000098D 05DDFF              <1>     ADD AX, %6
+  1250 00000990 50                  <1>     PUSH AX
+  1251 00000991 E8(0000)            <1>     CALL line
+  1252                                      
+  1253 00000994 58                          POP AX
+  1254 00000995 5D                          POP BP
+  1255 00000996 C3                          RET
+  1256                                  
+  1257                                  ; ROTINA DE LIMPEZA GERAL
+  1258                                  ; Desenha todas as possíveis posições com a cor 0 (preto) 
+  1259                                  ; para apagar completamente os rastros dos lutadores na tela.
+  1260                                  apaga_lutadores:
+  1261 00000997 55                          PUSH BP
+  1262 00000998 89E5                        MOV BP, SP
+  1263 0000099A 50                          PUSH AX
+  1264                                  
+  1265                                      ; Define a cor preta (0) para apagar
+  1266 0000099B C606[0000]00                MOV byte [cor], 0
+  1267                                      
+  1268                                      ; Apaga rastros do P1 
+  1269                                      CIRCLE [p1_x], 0, [p1_y], 0           
+  1270 000009A0 A1[0000]            <1>     MOV AX, %1
+  1271 000009A3 050000              <1>     ADD AX, %2
+  1272 000009A6 50                  <1>     PUSH AX
+  1273 000009A7 A1[0200]            <1>     MOV AX, %3
+  1274 000009AA 050000              <1>     ADD AX, %4
+  1275 000009AD 50                  <1>     PUSH AX
+  1276 000009AE B80A00              <1>     MOV AX, 10
+  1277 000009B1 50                  <1>     PUSH AX
+  1278 000009B2 E8(0000)            <1>     CALL circle
+  1279                                      CIRCLE [p1_x], 0, [p1_y], -25         
+  1280 000009B5 A1[0000]            <1>     MOV AX, %1
+  1281 000009B8 050000              <1>     ADD AX, %2
+  1282 000009BB 50                  <1>     PUSH AX
+  1283 000009BC A1[0200]            <1>     MOV AX, %3
+  1284 000009BF 05E7FF              <1>     ADD AX, %4
+  1285 000009C2 50                  <1>     PUSH AX
+  1286 000009C3 B80A00              <1>     MOV AX, 10
+  1287 000009C6 50                  <1>     PUSH AX
+  1288 000009C7 E8(0000)            <1>     CALL circle
+  1289                                      LINE [p1_x], 0, [p1_y], -10, 0, -50   
+  1290 000009CA A1[0000]            <1>     MOV AX, %1
+  1291 000009CD 050000              <1>     ADD AX, %2
+  1292 000009D0 50                  <1>     PUSH AX
+  1293 000009D1 A1[0200]            <1>     MOV AX, %3
+  1294 000009D4 05F6FF              <1>     ADD AX, %4
+  1295 000009D7 50                  <1>     PUSH AX
+  1296 000009D8 A1[0000]            <1>     MOV AX, %1
+  1297 000009DB 050000              <1>     ADD AX, %5
+  1298 000009DE 50                  <1>     PUSH AX
+  1299 000009DF A1[0200]            <1>     MOV AX, %3
+  1300 000009E2 05CEFF              <1>     ADD AX, %6
+  1301 000009E5 50                  <1>     PUSH AX
+  1302 000009E6 E8(0000)            <1>     CALL line
+  1303                                      LINE [p1_x], 0, [p1_y], -15, 5, -25
+  1304 000009E9 A1[0000]            <1>     MOV AX, %1
+  1305 000009EC 050000              <1>     ADD AX, %2
+  1306 000009EF 50                  <1>     PUSH AX
+  1307 000009F0 A1[0200]            <1>     MOV AX, %3
+  1308 000009F3 05F1FF              <1>     ADD AX, %4
+  1309 000009F6 50                  <1>     PUSH AX
+  1310 000009F7 A1[0000]            <1>     MOV AX, %1
+  1311 000009FA 050500              <1>     ADD AX, %5
+  1312 000009FD 50                  <1>     PUSH AX
+  1313 000009FE A1[0200]            <1>     MOV AX, %3
+  1314 00000A01 05E7FF              <1>     ADD AX, %6
+  1315 00000A04 50                  <1>     PUSH AX
+  1316 00000A05 E8(0000)            <1>     CALL line
+  1317                                      LINE [p1_x], 5, [p1_y], -25, 10, -5
+  1318 00000A08 A1[0000]            <1>     MOV AX, %1
+  1319 00000A0B 050500              <1>     ADD AX, %2
+  1320 00000A0E 50                  <1>     PUSH AX
+  1321 00000A0F A1[0200]            <1>     MOV AX, %3
+  1322 00000A12 05E7FF              <1>     ADD AX, %4
+  1323 00000A15 50                  <1>     PUSH AX
+  1324 00000A16 A1[0000]            <1>     MOV AX, %1
+  1325 00000A19 050A00              <1>     ADD AX, %5
+  1326 00000A1C 50                  <1>     PUSH AX
+  1327 00000A1D A1[0200]            <1>     MOV AX, %3
+  1328 00000A20 05FBFF              <1>     ADD AX, %6
+  1329 00000A23 50                  <1>     PUSH AX
+  1330 00000A24 E8(0000)            <1>     CALL line
+  1331                                      LINE [p1_x], 0, [p1_y], -15, 10, -25
+  1332 00000A27 A1[0000]            <1>     MOV AX, %1
+  1333 00000A2A 050000              <1>     ADD AX, %2
+  1334 00000A2D 50                  <1>     PUSH AX
+  1335 00000A2E A1[0200]            <1>     MOV AX, %3
+  1336 00000A31 05F1FF              <1>     ADD AX, %4
+  1337 00000A34 50                  <1>     PUSH AX
+  1338 00000A35 A1[0000]            <1>     MOV AX, %1
+  1339 00000A38 050A00              <1>     ADD AX, %5
+  1340 00000A3B 50                  <1>     PUSH AX
+  1341 00000A3C A1[0200]            <1>     MOV AX, %3
+  1342 00000A3F 05E7FF              <1>     ADD AX, %6
+  1343 00000A42 50                  <1>     PUSH AX
+  1344 00000A43 E8(0000)            <1>     CALL line
+  1345                                      LINE [p1_x], 10, [p1_y], -25, 20, -5
+  1346 00000A46 A1[0000]            <1>     MOV AX, %1
+  1347 00000A49 050A00              <1>     ADD AX, %2
+  1348 00000A4C 50                  <1>     PUSH AX
+  1349 00000A4D A1[0200]            <1>     MOV AX, %3
+  1350 00000A50 05E7FF              <1>     ADD AX, %4
+  1351 00000A53 50                  <1>     PUSH AX
+  1352 00000A54 A1[0000]            <1>     MOV AX, %1
+  1353 00000A57 051400              <1>     ADD AX, %5
+  1354 00000A5A 50                  <1>     PUSH AX
+  1355 00000A5B A1[0200]            <1>     MOV AX, %3
+  1356 00000A5E 05FBFF              <1>     ADD AX, %6
+  1357 00000A61 50                  <1>     PUSH AX
+  1358 00000A62 E8(0000)            <1>     CALL line
+  1359                                      LINE [p1_x], 0, [p1_y], -15, 40, -15
+  1360 00000A65 A1[0000]            <1>     MOV AX, %1
+  1361 00000A68 050000              <1>     ADD AX, %2
+  1362 00000A6B 50                  <1>     PUSH AX
+  1363 00000A6C A1[0200]            <1>     MOV AX, %3
+  1364 00000A6F 05F1FF              <1>     ADD AX, %4
+  1365 00000A72 50                  <1>     PUSH AX
+  1366 00000A73 A1[0000]            <1>     MOV AX, %1
+  1367 00000A76 052800              <1>     ADD AX, %5
+  1368 00000A79 50                  <1>     PUSH AX
+  1369 00000A7A A1[0200]            <1>     MOV AX, %3
+  1370 00000A7D 05F1FF              <1>     ADD AX, %6
+  1371 00000A80 50                  <1>     PUSH AX
+  1372 00000A81 E8(0000)            <1>     CALL line
+  1373                                      LINE [p1_x], 0, [p1_y], -40, 5, -50
+  1374 00000A84 A1[0000]            <1>     MOV AX, %1
+  1375 00000A87 050000              <1>     ADD AX, %2
+  1376 00000A8A 50                  <1>     PUSH AX
+  1377 00000A8B A1[0200]            <1>     MOV AX, %3
+  1378 00000A8E 05D8FF              <1>     ADD AX, %4
+  1379 00000A91 50                  <1>     PUSH AX
+  1380 00000A92 A1[0000]            <1>     MOV AX, %1
+  1381 00000A95 050500              <1>     ADD AX, %5
+  1382 00000A98 50                  <1>     PUSH AX
+  1383 00000A99 A1[0200]            <1>     MOV AX, %3
+  1384 00000A9C 05CEFF              <1>     ADD AX, %6
+  1385 00000A9F 50                  <1>     PUSH AX
+  1386 00000AA0 E8(0000)            <1>     CALL line
+  1387                                      LINE [p1_x], 5, [p1_y], -50, 10, -30
+  1388 00000AA3 A1[0000]            <1>     MOV AX, %1
+  1389 00000AA6 050500              <1>     ADD AX, %2
+  1390 00000AA9 50                  <1>     PUSH AX
+  1391 00000AAA A1[0200]            <1>     MOV AX, %3
+  1392 00000AAD 05CEFF              <1>     ADD AX, %4
+  1393 00000AB0 50                  <1>     PUSH AX
+  1394 00000AB1 A1[0000]            <1>     MOV AX, %1
+  1395 00000AB4 050A00              <1>     ADD AX, %5
+  1396 00000AB7 50                  <1>     PUSH AX
+  1397 00000AB8 A1[0200]            <1>     MOV AX, %3
+  1398 00000ABB 05E2FF              <1>     ADD AX, %6
+  1399 00000ABE 50                  <1>     PUSH AX
+  1400 00000ABF E8(0000)            <1>     CALL line
+  1401                                      LINE [p1_x], 0, [p1_y], -40, 10, -50
+  1402 00000AC2 A1[0000]            <1>     MOV AX, %1
+  1403 00000AC5 050000              <1>     ADD AX, %2
+  1404 00000AC8 50                  <1>     PUSH AX
+  1405 00000AC9 A1[0200]            <1>     MOV AX, %3
+  1406 00000ACC 05D8FF              <1>     ADD AX, %4
+  1407 00000ACF 50                  <1>     PUSH AX
+  1408 00000AD0 A1[0000]            <1>     MOV AX, %1
+  1409 00000AD3 050A00              <1>     ADD AX, %5
+  1410 00000AD6 50                  <1>     PUSH AX
+  1411 00000AD7 A1[0200]            <1>     MOV AX, %3
+  1412 00000ADA 05CEFF              <1>     ADD AX, %6
+  1413 00000ADD 50                  <1>     PUSH AX
+  1414 00000ADE E8(0000)            <1>     CALL line
+  1415                                      LINE [p1_x], 10, [p1_y], -50, 20, -30
+  1416 00000AE1 A1[0000]            <1>     MOV AX, %1
+  1417 00000AE4 050A00              <1>     ADD AX, %2
+  1418 00000AE7 50                  <1>     PUSH AX
+  1419 00000AE8 A1[0200]            <1>     MOV AX, %3
+  1420 00000AEB 05CEFF              <1>     ADD AX, %4
+  1421 00000AEE 50                  <1>     PUSH AX
+  1422 00000AEF A1[0000]            <1>     MOV AX, %1
+  1423 00000AF2 051400              <1>     ADD AX, %5
+  1424 00000AF5 50                  <1>     PUSH AX
+  1425 00000AF6 A1[0200]            <1>     MOV AX, %3
+  1426 00000AF9 05E2FF              <1>     ADD AX, %6
+  1427 00000AFC 50                  <1>     PUSH AX
+  1428 00000AFD E8(0000)            <1>     CALL line
+  1429                                      LINE [p1_x], 0, [p1_y], -35, -15, -65
+  1430 00000B00 A1[0000]            <1>     MOV AX, %1
+  1431 00000B03 050000              <1>     ADD AX, %2
+  1432 00000B06 50                  <1>     PUSH AX
+  1433 00000B07 A1[0200]            <1>     MOV AX, %3
+  1434 00000B0A 05DDFF              <1>     ADD AX, %4
+  1435 00000B0D 50                  <1>     PUSH AX
+  1436 00000B0E A1[0000]            <1>     MOV AX, %1
+  1437 00000B11 05F1FF              <1>     ADD AX, %5
+  1438 00000B14 50                  <1>     PUSH AX
+  1439 00000B15 A1[0200]            <1>     MOV AX, %3
+  1440 00000B18 05BFFF              <1>     ADD AX, %6
+  1441 00000B1B 50                  <1>     PUSH AX
+  1442 00000B1C E8(0000)            <1>     CALL line
+  1443                                      LINE [p1_x], 0, [p1_y], -35, 15, -65
+  1444 00000B1F A1[0000]            <1>     MOV AX, %1
+  1445 00000B22 050000              <1>     ADD AX, %2
+  1446 00000B25 50                  <1>     PUSH AX
+  1447 00000B26 A1[0200]            <1>     MOV AX, %3
+  1448 00000B29 05DDFF              <1>     ADD AX, %4
+  1449 00000B2C 50                  <1>     PUSH AX
+  1450 00000B2D A1[0000]            <1>     MOV AX, %1
+  1451 00000B30 050F00              <1>     ADD AX, %5
+  1452 00000B33 50                  <1>     PUSH AX
+  1453 00000B34 A1[0200]            <1>     MOV AX, %3
+  1454 00000B37 05BFFF              <1>     ADD AX, %6
+  1455 00000B3A 50                  <1>     PUSH AX
+  1456 00000B3B E8(0000)            <1>     CALL line
+  1457                                      LINE [p1_x], 0, [p1_y], -35, -5, -65
+  1458 00000B3E A1[0000]            <1>     MOV AX, %1
+  1459 00000B41 050000              <1>     ADD AX, %2
+  1460 00000B44 50                  <1>     PUSH AX
+  1461 00000B45 A1[0200]            <1>     MOV AX, %3
+  1462 00000B48 05DDFF              <1>     ADD AX, %4
+  1463 00000B4B 50                  <1>     PUSH AX
+  1464 00000B4C A1[0000]            <1>     MOV AX, %1
+  1465 00000B4F 05FBFF              <1>     ADD AX, %5
+  1466 00000B52 50                  <1>     PUSH AX
+  1467 00000B53 A1[0200]            <1>     MOV AX, %3
+  1468 00000B56 05BFFF              <1>     ADD AX, %6
+  1469 00000B59 50                  <1>     PUSH AX
+  1470 00000B5A E8(0000)            <1>     CALL line
+  1471                                      LINE [p1_x], 0, [p1_y], -35, 5, -65
+  1472 00000B5D A1[0000]            <1>     MOV AX, %1
+  1473 00000B60 050000              <1>     ADD AX, %2
+  1474 00000B63 50                  <1>     PUSH AX
+  1475 00000B64 A1[0200]            <1>     MOV AX, %3
+  1476 00000B67 05DDFF              <1>     ADD AX, %4
+  1477 00000B6A 50                  <1>     PUSH AX
+  1478 00000B6B A1[0000]            <1>     MOV AX, %1
+  1479 00000B6E 050500              <1>     ADD AX, %5
+  1480 00000B71 50                  <1>     PUSH AX
+  1481 00000B72 A1[0200]            <1>     MOV AX, %3
+  1482 00000B75 05BFFF              <1>     ADD AX, %6
+  1483 00000B78 50                  <1>     PUSH AX
+  1484 00000B79 E8(0000)            <1>     CALL line
+  1485                                      LINE [p1_x], 0, [p1_y], -50, -20, -65
+  1486 00000B7C A1[0000]            <1>     MOV AX, %1
+  1487 00000B7F 050000              <1>     ADD AX, %2
+  1488 00000B82 50                  <1>     PUSH AX
+  1489 00000B83 A1[0200]            <1>     MOV AX, %3
+  1490 00000B86 05CEFF              <1>     ADD AX, %4
+  1491 00000B89 50                  <1>     PUSH AX
+  1492 00000B8A A1[0000]            <1>     MOV AX, %1
+  1493 00000B8D 05ECFF              <1>     ADD AX, %5
+  1494 00000B90 50                  <1>     PUSH AX
+  1495 00000B91 A1[0200]            <1>     MOV AX, %3
+  1496 00000B94 05BFFF              <1>     ADD AX, %6
+  1497 00000B97 50                  <1>     PUSH AX
+  1498 00000B98 E8(0000)            <1>     CALL line
+  1499                                      LINE [p1_x], 0, [p1_y], -50, 20, -65
+  1500 00000B9B A1[0000]            <1>     MOV AX, %1
+  1501 00000B9E 050000              <1>     ADD AX, %2
+  1502 00000BA1 50                  <1>     PUSH AX
+  1503 00000BA2 A1[0200]            <1>     MOV AX, %3
+  1504 00000BA5 05CEFF              <1>     ADD AX, %4
+  1505 00000BA8 50                  <1>     PUSH AX
+  1506 00000BA9 A1[0000]            <1>     MOV AX, %1
+  1507 00000BAC 051400              <1>     ADD AX, %5
+  1508 00000BAF 50                  <1>     PUSH AX
+  1509 00000BB0 A1[0200]            <1>     MOV AX, %3
+  1510 00000BB3 05BFFF              <1>     ADD AX, %6
+  1511 00000BB6 50                  <1>     PUSH AX
+  1512 00000BB7 E8(0000)            <1>     CALL line
+  1513                                      LINE [p1_x], 0, [p1_y], -35, 40, -35
+  1514 00000BBA A1[0000]            <1>     MOV AX, %1
+  1515 00000BBD 050000              <1>     ADD AX, %2
+  1516 00000BC0 50                  <1>     PUSH AX
+  1517 00000BC1 A1[0200]            <1>     MOV AX, %3
+  1518 00000BC4 05DDFF              <1>     ADD AX, %4
+  1519 00000BC7 50                  <1>     PUSH AX
+  1520 00000BC8 A1[0000]            <1>     MOV AX, %1
+  1521 00000BCB 052800              <1>     ADD AX, %5
+  1522 00000BCE 50                  <1>     PUSH AX
+  1523 00000BCF A1[0200]            <1>     MOV AX, %3
+  1524 00000BD2 05DDFF              <1>     ADD AX, %6
+  1525 00000BD5 50                  <1>     PUSH AX
+  1526 00000BD6 E8(0000)            <1>     CALL line
+  1527                                      
+  1528                                      ; Apaga rastros do P2 
+  1529                                      CIRCLE [p2_x], 0, [p2_y], 0
+  1530 00000BD9 A1[0400]            <1>     MOV AX, %1
+  1531 00000BDC 050000              <1>     ADD AX, %2
+  1532 00000BDF 50                  <1>     PUSH AX
+  1533 00000BE0 A1[0600]            <1>     MOV AX, %3
+  1534 00000BE3 050000              <1>     ADD AX, %4
+  1535 00000BE6 50                  <1>     PUSH AX
+  1536 00000BE7 B80A00              <1>     MOV AX, 10
+  1537 00000BEA 50                  <1>     PUSH AX
+  1538 00000BEB E8(0000)            <1>     CALL circle
+  1539                                      CIRCLE [p2_x], 0, [p2_y], -25
+  1540 00000BEE A1[0400]            <1>     MOV AX, %1
+  1541 00000BF1 050000              <1>     ADD AX, %2
+  1542 00000BF4 50                  <1>     PUSH AX
+  1543 00000BF5 A1[0600]            <1>     MOV AX, %3
+  1544 00000BF8 05E7FF              <1>     ADD AX, %4
+  1545 00000BFB 50                  <1>     PUSH AX
+  1546 00000BFC B80A00              <1>     MOV AX, 10
+  1547 00000BFF 50                  <1>     PUSH AX
+  1548 00000C00 E8(0000)            <1>     CALL circle
+  1549                                      LINE [p2_x], 0, [p2_y], -10, 0, -50
+  1550 00000C03 A1[0400]            <1>     MOV AX, %1
+  1551 00000C06 050000              <1>     ADD AX, %2
+  1552 00000C09 50                  <1>     PUSH AX
+  1553 00000C0A A1[0600]            <1>     MOV AX, %3
+  1554 00000C0D 05F6FF              <1>     ADD AX, %4
+  1555 00000C10 50                  <1>     PUSH AX
+  1556 00000C11 A1[0400]            <1>     MOV AX, %1
+  1557 00000C14 050000              <1>     ADD AX, %5
+  1558 00000C17 50                  <1>     PUSH AX
+  1559 00000C18 A1[0600]            <1>     MOV AX, %3
+  1560 00000C1B 05CEFF              <1>     ADD AX, %6
+  1561 00000C1E 50                  <1>     PUSH AX
+  1562 00000C1F E8(0000)            <1>     CALL line
+  1563                                      LINE [p2_x], 0, [p2_y], -15, -5, -25
+  1564 00000C22 A1[0400]            <1>     MOV AX, %1
+  1565 00000C25 050000              <1>     ADD AX, %2
+  1566 00000C28 50                  <1>     PUSH AX
+  1567 00000C29 A1[0600]            <1>     MOV AX, %3
+  1568 00000C2C 05F1FF              <1>     ADD AX, %4
+  1569 00000C2F 50                  <1>     PUSH AX
+  1570 00000C30 A1[0400]            <1>     MOV AX, %1
+  1571 00000C33 05FBFF              <1>     ADD AX, %5
+  1572 00000C36 50                  <1>     PUSH AX
+  1573 00000C37 A1[0600]            <1>     MOV AX, %3
+  1574 00000C3A 05E7FF              <1>     ADD AX, %6
+  1575 00000C3D 50                  <1>     PUSH AX
+  1576 00000C3E E8(0000)            <1>     CALL line
+  1577                                      LINE [p2_x], -5, [p2_y], -25, -10, -5
+  1578 00000C41 A1[0400]            <1>     MOV AX, %1
+  1579 00000C44 05FBFF              <1>     ADD AX, %2
+  1580 00000C47 50                  <1>     PUSH AX
+  1581 00000C48 A1[0600]            <1>     MOV AX, %3
+  1582 00000C4B 05E7FF              <1>     ADD AX, %4
+  1583 00000C4E 50                  <1>     PUSH AX
+  1584 00000C4F A1[0400]            <1>     MOV AX, %1
+  1585 00000C52 05F6FF              <1>     ADD AX, %5
+  1586 00000C55 50                  <1>     PUSH AX
+  1587 00000C56 A1[0600]            <1>     MOV AX, %3
+  1588 00000C59 05FBFF              <1>     ADD AX, %6
+  1589 00000C5C 50                  <1>     PUSH AX
+  1590 00000C5D E8(0000)            <1>     CALL line
+  1591                                      LINE [p2_x], 0, [p2_y], -15, -10, -25
+  1592 00000C60 A1[0400]            <1>     MOV AX, %1
+  1593 00000C63 050000              <1>     ADD AX, %2
+  1594 00000C66 50                  <1>     PUSH AX
+  1595 00000C67 A1[0600]            <1>     MOV AX, %3
+  1596 00000C6A 05F1FF              <1>     ADD AX, %4
+  1597 00000C6D 50                  <1>     PUSH AX
+  1598 00000C6E A1[0400]            <1>     MOV AX, %1
+  1599 00000C71 05F6FF              <1>     ADD AX, %5
+  1600 00000C74 50                  <1>     PUSH AX
+  1601 00000C75 A1[0600]            <1>     MOV AX, %3
+  1602 00000C78 05E7FF              <1>     ADD AX, %6
+  1603 00000C7B 50                  <1>     PUSH AX
+  1604 00000C7C E8(0000)            <1>     CALL line
+  1605                                      LINE [p2_x], -10, [p2_y], -25, -20, -5
+  1606 00000C7F A1[0400]            <1>     MOV AX, %1
+  1607 00000C82 05F6FF              <1>     ADD AX, %2
+  1608 00000C85 50                  <1>     PUSH AX
+  1609 00000C86 A1[0600]            <1>     MOV AX, %3
+  1610 00000C89 05E7FF              <1>     ADD AX, %4
+  1611 00000C8C 50                  <1>     PUSH AX
+  1612 00000C8D A1[0400]            <1>     MOV AX, %1
+  1613 00000C90 05ECFF              <1>     ADD AX, %5
+  1614 00000C93 50                  <1>     PUSH AX
+  1615 00000C94 A1[0600]            <1>     MOV AX, %3
+  1616 00000C97 05FBFF              <1>     ADD AX, %6
+  1617 00000C9A 50                  <1>     PUSH AX
+  1618 00000C9B E8(0000)            <1>     CALL line
+  1619                                      LINE [p2_x], 0, [p2_y], -15, -40, -15
+  1620 00000C9E A1[0400]            <1>     MOV AX, %1
+  1621 00000CA1 050000              <1>     ADD AX, %2
+  1622 00000CA4 50                  <1>     PUSH AX
+  1623 00000CA5 A1[0600]            <1>     MOV AX, %3
+  1624 00000CA8 05F1FF              <1>     ADD AX, %4
+  1625 00000CAB 50                  <1>     PUSH AX
+  1626 00000CAC A1[0400]            <1>     MOV AX, %1
+  1627 00000CAF 05D8FF              <1>     ADD AX, %5
+  1628 00000CB2 50                  <1>     PUSH AX
+  1629 00000CB3 A1[0600]            <1>     MOV AX, %3
+  1630 00000CB6 05F1FF              <1>     ADD AX, %6
+  1631 00000CB9 50                  <1>     PUSH AX
+  1632 00000CBA E8(0000)            <1>     CALL line
+  1633                                      LINE [p2_x], 0, [p2_y], -40, -5, -50
+  1634 00000CBD A1[0400]            <1>     MOV AX, %1
+  1635 00000CC0 050000              <1>     ADD AX, %2
+  1636 00000CC3 50                  <1>     PUSH AX
+  1637 00000CC4 A1[0600]            <1>     MOV AX, %3
+  1638 00000CC7 05D8FF              <1>     ADD AX, %4
+  1639 00000CCA 50                  <1>     PUSH AX
+  1640 00000CCB A1[0400]            <1>     MOV AX, %1
+  1641 00000CCE 05FBFF              <1>     ADD AX, %5
+  1642 00000CD1 50                  <1>     PUSH AX
+  1643 00000CD2 A1[0600]            <1>     MOV AX, %3
+  1644 00000CD5 05CEFF              <1>     ADD AX, %6
+  1645 00000CD8 50                  <1>     PUSH AX
+  1646 00000CD9 E8(0000)            <1>     CALL line
+  1647                                      LINE [p2_x], -5, [p2_y], -50, -10, -30
+  1648 00000CDC A1[0400]            <1>     MOV AX, %1
+  1649 00000CDF 05FBFF              <1>     ADD AX, %2
+  1650 00000CE2 50                  <1>     PUSH AX
+  1651 00000CE3 A1[0600]            <1>     MOV AX, %3
+  1652 00000CE6 05CEFF              <1>     ADD AX, %4
+  1653 00000CE9 50                  <1>     PUSH AX
+  1654 00000CEA A1[0400]            <1>     MOV AX, %1
+  1655 00000CED 05F6FF              <1>     ADD AX, %5
+  1656 00000CF0 50                  <1>     PUSH AX
+  1657 00000CF1 A1[0600]            <1>     MOV AX, %3
+  1658 00000CF4 05E2FF              <1>     ADD AX, %6
+  1659 00000CF7 50                  <1>     PUSH AX
+  1660 00000CF8 E8(0000)            <1>     CALL line
+  1661                                      LINE [p2_x], 0, [p2_y], -40, -10, -50
+  1662 00000CFB A1[0400]            <1>     MOV AX, %1
+  1663 00000CFE 050000              <1>     ADD AX, %2
+  1664 00000D01 50                  <1>     PUSH AX
+  1665 00000D02 A1[0600]            <1>     MOV AX, %3
+  1666 00000D05 05D8FF              <1>     ADD AX, %4
+  1667 00000D08 50                  <1>     PUSH AX
+  1668 00000D09 A1[0400]            <1>     MOV AX, %1
+  1669 00000D0C 05F6FF              <1>     ADD AX, %5
+  1670 00000D0F 50                  <1>     PUSH AX
+  1671 00000D10 A1[0600]            <1>     MOV AX, %3
+  1672 00000D13 05CEFF              <1>     ADD AX, %6
+  1673 00000D16 50                  <1>     PUSH AX
+  1674 00000D17 E8(0000)            <1>     CALL line
+  1675                                      LINE [p2_x], -10, [p2_y], -50, -20, -30
+  1676 00000D1A A1[0400]            <1>     MOV AX, %1
+  1677 00000D1D 05F6FF              <1>     ADD AX, %2
+  1678 00000D20 50                  <1>     PUSH AX
+  1679 00000D21 A1[0600]            <1>     MOV AX, %3
+  1680 00000D24 05CEFF              <1>     ADD AX, %4
+  1681 00000D27 50                  <1>     PUSH AX
+  1682 00000D28 A1[0400]            <1>     MOV AX, %1
+  1683 00000D2B 05ECFF              <1>     ADD AX, %5
+  1684 00000D2E 50                  <1>     PUSH AX
+  1685 00000D2F A1[0600]            <1>     MOV AX, %3
+  1686 00000D32 05E2FF              <1>     ADD AX, %6
+  1687 00000D35 50                  <1>     PUSH AX
+  1688 00000D36 E8(0000)            <1>     CALL line
+  1689                                      LINE [p2_x], 0, [p2_y], -35, -15, -65
+  1690 00000D39 A1[0400]            <1>     MOV AX, %1
+  1691 00000D3C 050000              <1>     ADD AX, %2
+  1692 00000D3F 50                  <1>     PUSH AX
+  1693 00000D40 A1[0600]            <1>     MOV AX, %3
+  1694 00000D43 05DDFF              <1>     ADD AX, %4
+  1695 00000D46 50                  <1>     PUSH AX
+  1696 00000D47 A1[0400]            <1>     MOV AX, %1
+  1697 00000D4A 05F1FF              <1>     ADD AX, %5
+  1698 00000D4D 50                  <1>     PUSH AX
+  1699 00000D4E A1[0600]            <1>     MOV AX, %3
+  1700 00000D51 05BFFF              <1>     ADD AX, %6
+  1701 00000D54 50                  <1>     PUSH AX
+  1702 00000D55 E8(0000)            <1>     CALL line
+  1703                                      LINE [p2_x], 0, [p2_y], -35, 15, -65
+  1704 00000D58 A1[0400]            <1>     MOV AX, %1
+  1705 00000D5B 050000              <1>     ADD AX, %2
+  1706 00000D5E 50                  <1>     PUSH AX
+  1707 00000D5F A1[0600]            <1>     MOV AX, %3
+  1708 00000D62 05DDFF              <1>     ADD AX, %4
+  1709 00000D65 50                  <1>     PUSH AX
+  1710 00000D66 A1[0400]            <1>     MOV AX, %1
+  1711 00000D69 050F00              <1>     ADD AX, %5
+  1712 00000D6C 50                  <1>     PUSH AX
+  1713 00000D6D A1[0600]            <1>     MOV AX, %3
+  1714 00000D70 05BFFF              <1>     ADD AX, %6
+  1715 00000D73 50                  <1>     PUSH AX
+  1716 00000D74 E8(0000)            <1>     CALL line
+  1717                                      LINE [p2_x], 0, [p2_y], -35, -5, -65
+  1718 00000D77 A1[0400]            <1>     MOV AX, %1
+  1719 00000D7A 050000              <1>     ADD AX, %2
+  1720 00000D7D 50                  <1>     PUSH AX
+  1721 00000D7E A1[0600]            <1>     MOV AX, %3
+  1722 00000D81 05DDFF              <1>     ADD AX, %4
+  1723 00000D84 50                  <1>     PUSH AX
+  1724 00000D85 A1[0400]            <1>     MOV AX, %1
+  1725 00000D88 05FBFF              <1>     ADD AX, %5
+  1726 00000D8B 50                  <1>     PUSH AX
+  1727 00000D8C A1[0600]            <1>     MOV AX, %3
+  1728 00000D8F 05BFFF              <1>     ADD AX, %6
+  1729 00000D92 50                  <1>     PUSH AX
+  1730 00000D93 E8(0000)            <1>     CALL line
+  1731                                      LINE [p2_x], 0, [p2_y], -35, 5, -65
+  1732 00000D96 A1[0400]            <1>     MOV AX, %1
+  1733 00000D99 050000              <1>     ADD AX, %2
+  1734 00000D9C 50                  <1>     PUSH AX
+  1735 00000D9D A1[0600]            <1>     MOV AX, %3
+  1736 00000DA0 05DDFF              <1>     ADD AX, %4
+  1737 00000DA3 50                  <1>     PUSH AX
+  1738 00000DA4 A1[0400]            <1>     MOV AX, %1
+  1739 00000DA7 050500              <1>     ADD AX, %5
+  1740 00000DAA 50                  <1>     PUSH AX
+  1741 00000DAB A1[0600]            <1>     MOV AX, %3
+  1742 00000DAE 05BFFF              <1>     ADD AX, %6
+  1743 00000DB1 50                  <1>     PUSH AX
+  1744 00000DB2 E8(0000)            <1>     CALL line
+  1745                                      LINE [p2_x], 0, [p2_y], -50, -20, -65
+  1746 00000DB5 A1[0400]            <1>     MOV AX, %1
+  1747 00000DB8 050000              <1>     ADD AX, %2
+  1748 00000DBB 50                  <1>     PUSH AX
+  1749 00000DBC A1[0600]            <1>     MOV AX, %3
+  1750 00000DBF 05CEFF              <1>     ADD AX, %4
+  1751 00000DC2 50                  <1>     PUSH AX
+  1752 00000DC3 A1[0400]            <1>     MOV AX, %1
+  1753 00000DC6 05ECFF              <1>     ADD AX, %5
+  1754 00000DC9 50                  <1>     PUSH AX
+  1755 00000DCA A1[0600]            <1>     MOV AX, %3
+  1756 00000DCD 05BFFF              <1>     ADD AX, %6
+  1757 00000DD0 50                  <1>     PUSH AX
+  1758 00000DD1 E8(0000)            <1>     CALL line
+  1759                                      LINE [p2_x], 0, [p2_y], -50, 20, -65
+  1760 00000DD4 A1[0400]            <1>     MOV AX, %1
+  1761 00000DD7 050000              <1>     ADD AX, %2
+  1762 00000DDA 50                  <1>     PUSH AX
+  1763 00000DDB A1[0600]            <1>     MOV AX, %3
+  1764 00000DDE 05CEFF              <1>     ADD AX, %4
+  1765 00000DE1 50                  <1>     PUSH AX
+  1766 00000DE2 A1[0400]            <1>     MOV AX, %1
+  1767 00000DE5 051400              <1>     ADD AX, %5
+  1768 00000DE8 50                  <1>     PUSH AX
+  1769 00000DE9 A1[0600]            <1>     MOV AX, %3
+  1770 00000DEC 05BFFF              <1>     ADD AX, %6
+  1771 00000DEF 50                  <1>     PUSH AX
+  1772 00000DF0 E8(0000)            <1>     CALL line
+  1773                                      LINE [p2_x], 0, [p2_y], -35, -40, -35
+  1774 00000DF3 A1[0400]            <1>     MOV AX, %1
+  1775 00000DF6 050000              <1>     ADD AX, %2
+  1776 00000DF9 50                  <1>     PUSH AX
+  1777 00000DFA A1[0600]            <1>     MOV AX, %3
+  1778 00000DFD 05DDFF              <1>     ADD AX, %4
+  1779 00000E00 50                  <1>     PUSH AX
+  1780 00000E01 A1[0400]            <1>     MOV AX, %1
+  1781 00000E04 05D8FF              <1>     ADD AX, %5
+  1782 00000E07 50                  <1>     PUSH AX
+  1783 00000E08 A1[0600]            <1>     MOV AX, %3
+  1784 00000E0B 05DDFF              <1>     ADD AX, %6
+  1785 00000E0E 50                  <1>     PUSH AX
+  1786 00000E0F E8(0000)            <1>     CALL line
+  1787                                  
+  1788 00000E12 58                          POP AX
+  1789 00000E13 5D                          POP BP
+  1790 00000E14 C3                          RET

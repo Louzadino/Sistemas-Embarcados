@@ -5,7 +5,9 @@
 
 segment data
     global p1_x, p1_y, p2_x, p2_y
-    global cor_p1, cor_p2
+    
+    ; Importa as cores que foram atualizadas pelo menu_inicial.asm
+    extern cor_p1, cor_p2
     
     ; Coordenadas iniciais dos lutadores na tela
     p1_x dw 150
@@ -13,10 +15,6 @@ segment data
     p2_x dw 490
     p2_y dw 115
     
-    ; Cores dinâmicas para customização na tela de seleção
-    cor_p1 db 1     ; Cor padrão Player 1 (Azul)
-    cor_p2 db 4     ; Cor padrão Player 2 (Vermelho)
-
 segment code
     global desenha_lutadores, apaga_lutadores
     global desenha_p1_normal, desenha_p2_normal
