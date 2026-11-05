@@ -1,6 +1,0 @@
-# Ignora tudo no diretório
-*
-
-# Mas não ignora a pasta específica ou arquivo que você quer manter
-!*.asm
-!.gitignore

@@ -6,8 +6,10 @@ segment data
     global key_a, key_d, key_left, key_right, key_q
     global key_t, key_m, key_n, key_r
     global key_w, key_s, key_up, key_down
-    global key_enter                      ; <-- 1. NOVO: Exporta a flag da tecla Enter
-    
+    global key_enter                      ; Exporta a flag da tecla Enter
+
+    extern jogo_pausado, p_travado
+
     key_a        db 0
     key_d        db 0
     key_left     db 0
@@ -21,8 +23,8 @@ segment data
     key_s        db 0
     key_up       db 0
     key_down     db 0
-    key_enter    db 0                      ; <-- 1. NOVO: Estado da tecla Enter (0=solta, 1=pressionada)
-    
+    key_enter    db 0                      ; Estado da tecla Enter (0=solta, 1=pressionada)
+
     ; Armazenamento do vetor original da interrupção de teclado do DOS
     velho_isr_off dw 0
     velho_isr_seg dw 0
@@ -233,17 +235,25 @@ continua_reseta_down_k:
     JNE continua_seta_enter           ; <-- 2. NOVO: Desvia para testar a tecla Enter
     JMP reseta_down
 
-    ; -------------------------------------------------------------
     ; TECLA ENTER (Scancode 1Ch / Break 9Ch) 
-    ; -------------------------------------------------------------
 continua_seta_enter:
     CMP AL, 1Ch         ; Scancode Make da tecla Enter (Pressionada)
     JNE continua_reseta_enter
     JMP seta_enter
 continua_reseta_enter:
     CMP AL, 9Ch         ; Scancode Break da tecla Enter (Solta)
-    JNE continua_final
+    JNE continua_seta_p
     JMP reseta_enter
+
+    ; TECLA DE PAUSA (P) - Scancode 19h / Break 99h
+continua_seta_p:
+    CMP AL, 19h
+    JNE continua_reseta_p
+    JMP seta_p
+continua_reseta_p:
+    CMP AL, 99h
+    JNE continua_final
+    JMP reseta_p
 
 continua_final:
     JMP fim_int9
@@ -325,12 +335,24 @@ reseta_down:
     MOV byte [key_down], 0
     JMP fim_int9
 
-; 3. NOVO: Manipuladores do estado da tecla Enter
+; Manipuladores do estado da tecla Enter
 seta_enter:
     MOV byte [key_enter], 1
     JMP fim_int9
 reseta_enter:
     MOV byte [key_enter], 0
+    JMP fim_int9
+
+; Manipuladores de PAUSA (Toggle)
+seta_p:
+    CMP byte [p_travado], 1     ; Se a tecla já estava abaixada, ignora
+    JE fim_int9
+    MOV byte [p_travado], 1     ; Trava para evitar múltiplos acionamentos
+    XOR byte [jogo_pausado], 1  ; Inverte o estado da pausa (0 -> 1 ou 1 -> 0)
+    JMP fim_int9
+
+reseta_p:
+    MOV byte [p_travado], 0     ; Destrava quando o 'P' for solto
     JMP fim_int9
 
 ; FIM DA INTERRUPÇÃO

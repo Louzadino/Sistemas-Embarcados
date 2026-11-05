@@ -30,6 +30,13 @@ segment code
     ; Importação da função timer
     extern timer
 
+    ; Importação da função timer e utilitários
+    extern timer, le_tick
+    extern ult_tick
+
+    ; Importação para a tela de pausa
+    extern jogo_pausado, render_pausa, apaga_pausa
+
     ; INICIALIZAÇÃO DO SISTEMA E VÍDEO
     MOV AX, data
     MOV DS, AX
@@ -71,12 +78,24 @@ segment code
 loop_principal:
     CALL delay
 
-    ; --- Correção do pulo de saída ---
+    ; Verifica se quer sair do jogo 
     CMP byte [key_q], 1
     JNE continua_game_loop
     JMP sair_jogo
 
 continua_game_loop:
+    ; VERIFICAÇÃO DE PAUSA 
+    CMP byte [jogo_pausado], 1
+    JE modo_pausa                ; Se estiver 1, vai pro render de pausa
+
+    ; Verifica se acabou de sair da pausa (transição 1 -> 0)
+    CMP byte [estado_anterior_pausa], 1
+    JNE .luta_normal
+    ; Se sim, apaga o texto "PAUSED" da tela e atualiza a flag
+    CALL apaga_pausa
+    MOV byte [estado_anterior_pausa], 0
+
+.luta_normal:
     ; 1. Processa colisões e ataques
     CALL verifica_ataques
     
@@ -91,7 +110,18 @@ continua_game_loop:
     
     CALL timer
     CMP AX, 1
-    ;JE tempo_acabou            ; Se AX = 1 (retorno da função timer), encerra a partida    
+    ;JE tempo_acabou            
+    JMP loop_principal
+
+modo_pausa:
+    MOV byte [estado_anterior_pausa], 1  ; Registra que o jogo está pausado
+    ; Durante a pausa, renderiza apenas o aviso
+    CALL render_pausa
+    
+    ; Chama le_tick e sincroniza ult_tick para o timer nao avançar rapidamente
+    CALL le_tick
+    MOV [ult_tick], AX          
+
     JMP loop_principal
 
 ; FUNÇÕES DE RENDERIZAÇÃO
@@ -168,6 +198,7 @@ del1:
 
 segment data
     modo_anterior db 0           ; Armazena o modo de vídeo anterior
+    estado_anterior_pausa db 0   ; Variável para saber quando apagar a msg "PAUSED"
 
 segment stack stack
     resb 512

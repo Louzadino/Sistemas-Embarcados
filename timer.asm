@@ -21,6 +21,8 @@ max_delta_ticks     equ 200         ; limita saltos (pausa, travamento)
 cor_timer           equ 0Ch 
 
 segment data
+    global ult_tick
+
     minutos         dw 3
     segundos        dw 0
     ult_tick        dw 0            ; última leitura do contador do BIOS
@@ -31,6 +33,7 @@ segment data
 
 segment code
     global timer, desenha_timer, reset_timer
+    global le_tick
     extern escrever_na_tela
 
 ; =====================================================================
