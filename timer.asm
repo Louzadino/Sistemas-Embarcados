@@ -93,10 +93,10 @@ timer:
     JB .fim_conta
     SUB word [acc_ticks], ticks_x5_por_seg
 
-    CMP CX, 0
-    JNE .ja_apagou
-    MOV BL, 0                       ; apaga o texto antigo (preto)
-    CALL escreve_timer
+    ;CMP CX, 0
+    ;JNE .ja_apagou
+    ;MOV BL, 0                       ; apaga o texto antigo (preto)
+    ;CALL escreve_timer
     MOV CX, 1
 .ja_apagou:
 
@@ -158,6 +158,9 @@ formata_timer:
     MOV AX, [minutos]
     ADD AL, '0'
     MOV [str_timer + 1], AL         ; "0M"
+
+    ; Garante os dois pontos no meio para não aparecer lixo nos ciclos do clock
+    MOV byte [str_timer + 2], ':'
 
     MOV AX, [segundos]              ; < 60, então AH = 0 e DIV BL é seguro
     MOV BL, 10

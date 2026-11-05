@@ -52,10 +52,10 @@ verifica_soco_p1:
     JNE reseta_soco_p1              ; Se não estiver, reseta a trava do soco
     
     ; Desenha temporariamente o frame de soco do P1 na tela
-    CALL apaga_lutadores
-    CALL desenha_soco_p1
-    CALL render_p2      
-    CALL desenha_cenario
+    ;CALL apaga_lutadores
+    ;CALL desenha_soco_p1
+    ;CALL render_p2      
+    ;CALL desenha_cenario
 
     CMP byte [soco_p1_travado], 1   ; Se o golpe já foi contabilizado nesta pressão, ignora
     JE fim_soco_p1

@@ -9,6 +9,7 @@ segment code
     extern desenha_p1_normal, desenha_p2_normal
     extern desenha_p1_agachado, desenha_p2_agachado
     extern desenha_p1_andando, desenha_p2_andando
+    extern desenha_soco_p1, desenha_soco_p2
 
     ; Importação de variáveis de status e posições
     extern status_jogadores
@@ -237,28 +238,39 @@ continua_game_over:
 ; na física (se está pulando, agachando ou andando)
 global render_p1, render_p2
 
+; A função 'extern key_t' já foi declarada no começo do arquivo pelo seu código, 
+; então só precisamos usá-la aqui embaixo.
+extern key_t   ; (Garante que enxerga a variável exportada pelo teclado.asm)
+
 render_p1:
-    CMP byte [p1_estado], 1      ; Verifica se o P1 está agachado
+    CMP byte [key_t], 1     ; 1. Verifica se o P1 está atacando (Prioridade máxima visual)
+    JE r_soco_p1
+
+    CMP byte [p1_estado], 1 ; 2. Verifica se está agachado      
     JE r_agachado_p1
-    CMP word [p1_y], 115         ; Verifica se o P1 está no ar (pulando)
+
+    CMP word [p1_y], 115    ; 3. Verifica se está no ar (pulando)
     JG r_normal_p1      
-    CMP byte [key_a], 1          ; Verifica se está andando para esquerda
+
+    CMP byte [key_a], 1     ; 4. Verifica se está andando 
     JE r_check_passo_p1
-    CMP byte [key_d], 1          ; Verifica se está andando para direita
+    CMP byte [key_d], 1          
     JE r_check_passo_p1
 r_normal_p1:
-    CALL desenha_p1_normal       ; Desenha pose padrão em pé
+    CALL desenha_p1_normal       
+    RET
+r_soco_p1:
+    CALL desenha_soco_p1         
     RET
 r_check_passo_p1:
     MOV AX, [p1_x]
-    TEST AX, 0010h               ; Alterna o sprite de passo baseando nos bits da posição X
+    TEST AX, 0010h               
     JZ r_normal_p1
-    CALL desenha_p1_andando      ; Desenha pose andando
+    CALL desenha_p1_andando      
     RET
 r_agachado_p1:
-    CALL desenha_p1_agachado     ; Desenha pose agachada
+    CALL desenha_p1_agachado     
     RET
-
 render_p2:
     CMP byte [p2_estado], 1      ; Verifica se o P2 está agachado
     JE r_agachado_p2
@@ -293,10 +305,10 @@ sair_jogo:
 ; ROTINA DE DELAY (ATRASO POR SOFTWARE)
 delay:
     PUSH CX
-    MOV CX, 0100h       
+    MOV CX, 0080h       
 del2:
     PUSH CX
-    MOV CX, 0800h       
+    MOV CX, 0400h       
 del1:
     LOOP del1
     POP CX
