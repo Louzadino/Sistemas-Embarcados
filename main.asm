@@ -79,9 +79,9 @@ novo_round:
     INT 10h
 
     ; Reseta as posições e energias
-    MOV word [p1_x], 150
+    MOV word [p1_x], 260     
     MOV word [p1_y], 115
-    MOV word [p2_x], 490
+    MOV word [p2_x], 380     
     MOV word [p2_y], 115
     MOV word [energia_p1], 10
     MOV word [energia_p2], 10
@@ -196,9 +196,9 @@ morte_subita:
     INT 10h
 
     ; Reseta apenas posições (as vidas já foram setadas para 1 no rounds.asm)
-    MOV word [p1_x], 150
+    MOV word [p1_x], 260     
     MOV word [p1_y], 115
-    MOV word [p2_x], 490
+    MOV word [p2_x], 380     
     MOV word [p2_y], 115
     
     ;CALL reset_timer

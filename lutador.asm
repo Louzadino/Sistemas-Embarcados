@@ -10,9 +10,9 @@ segment data
     extern cor_p1, cor_p2
     
     ; Coordenadas iniciais dos lutadores na tela
-    p1_x dw 150
+    p1_x dw 260      
     p1_y dw 115
-    p2_x dw 490
+    p2_x dw 380      
     p2_y dw 115
     
 segment code
