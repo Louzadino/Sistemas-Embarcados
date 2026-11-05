@@ -18,10 +18,13 @@ segment data
     msg_r3_p2       db 'ROUND 3 - VITORIA DO PLAYER 2'   ; 29 chars
     
     ; Mensagens de Game Over
-    msg_go_titulo   db 'GAME OVER'                       ; 9 chars
-    msg_go_p1       db 'PARABENS PLAYER 1 E O CAMPEAO'   ; 29 chars
-    msg_go_p2       db 'PARABENS PLAYER 2 E O CAMPEAO'   ; 29 chars
-    msg_go_menu     db 'JOGAR NOVAMENTE (Y) / SAIR (N)'  ; 30 chars
+    msg_go_titulo   db 'X GAME OVER X'                   ; 13 chars
+    msg_go_p1       db 'v VITORIA DO JOGADOR 1 v'        ; 24 chars (use 'v' minúsculo caso não tenha emoji de fogo na sua fonte do DOS)
+    msg_go_p2       db 'v VITORIA DO JOGADOR 2 v'        ; 24 chars
+    
+    msg_go_menu     db 'JOGAR NOVAMENTE?'                ; 16 chars
+    msg_go_y        db 'Y - SIM'                         ; 7 chars
+    msg_go_n        db 'N - NAO'                         ; 7 chars
 
     ; Mensagem round de empate
     msg_morte_subita db 'EMPATE - MORTE SUBITA'
@@ -34,6 +37,7 @@ segment code
     extern escrever_na_tela
     extern key_y, key_n
     extern le_tick, ult_tick
+    extern desenha_vencedor_go
 
 ; Verifica se algum jogador ficou sem vida.
 ; Retorna: AX=0 (Luta continua), AX=1 (Round acabou), AX=2 (Game Over)
@@ -91,35 +95,59 @@ exibe_game_over:
     PUSH CX
     PUSH DX
     PUSH BP
+
+    ; LIMPA A TELA (último frame não vai atrapalhar a mensagem de campeão)
+    MOV AL, 12h
+    MOV AH, 0
+    INT 10h
     
     ; Escreve GAME OVER
     MOV BP, msg_go_titulo
-    MOV CX, 9
-    MOV DH, 10
-    MOV DL, 35
-    MOV BL, 0Ch                 ; Vermelho
+    MOV CX, 13
+    MOV DH, 3                   ; <<< NOVO LAYOUT DA IMAGEM (Linha 3)
+    MOV DL, 33                  
+    MOV BL, 0Fh                 ; Branco
     CALL escrever_na_tela
 
-    ; Verifica quem ganhou para mostrar a mensagem certa
+    ; Verifica quem ganhou para mostrar a mensagem certa e desenhar o lutador
     CMP word [vitorias_p1], 2
     JE .campeao_p1
     MOV BP, msg_go_p2
+    MOV AX, 2                   ; Passamos 2 no AX para a função de desenho saber quem ganhou
     JMP .imprime_campeao
 .campeao_p1:
     MOV BP, msg_go_p1
+    MOV AX, 1                   ; Passamos 1 no AX para a função de desenho saber quem ganhou
 .imprime_campeao:
-    MOV CX, 29
-    MOV DH, 13
-    MOV DL, 25
-    MOV BL, 0Eh                 ; Amarelo
+    MOV CX, 24
+    MOV DH, 6                   ; <<< NOVO LAYOUT DA IMAGEM (Linha 6)
+    MOV DL, 28
+    MOV BL, 0Fh                 ; Branco
     CALL escrever_na_tela
 
-    ; Mostra opções
+    ; DESENHA O BONECO VENCEDOR NO MEIO DA TELA
+    CALL desenha_vencedor_go
+
+    ; Mostra opções de Menu
     MOV BP, msg_go_menu
-    MOV CX, 30
-    MOV DH, 16
-    MOV DL, 25
+    MOV CX, 16
+    MOV DH, 20                  ; <<< NOVO LAYOUT (Linha 20)
+    MOV DL, 32
     MOV BL, 0Fh                 ; Branco
+    CALL escrever_na_tela
+
+    MOV BP, msg_go_y
+    MOV CX, 7
+    MOV DH, 23                  ; <<< NOVO LAYOUT (Linha 23)
+    MOV DL, 36
+    MOV BL, 0Fh                 
+    CALL escrever_na_tela
+
+    MOV BP, msg_go_n
+    MOV CX, 7
+    MOV DH, 25                  ; <<< NOVO LAYOUT (Linha 25)
+    MOV DL, 36
+    MOV BL, 0Fh                 
     CALL escrever_na_tela
 
 .aguarda_go:

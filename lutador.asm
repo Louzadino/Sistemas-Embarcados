@@ -22,6 +22,7 @@ segment code
     global desenha_p1_andando, desenha_p2_andando
     global desenha_soco_p1, desenha_soco_p2
     global desenha_chute_p1, desenha_chute_p2
+    global desenha_vencedor_go
     
     extern line, circle, cor
 
@@ -333,6 +334,65 @@ apaga_lutadores:
     LINE [p2_x], 0, [p2_y], -50, 20, -65
     LINE [p2_x], 0, [p2_y], -35, -40, -35
 
+    POP AX
+    POP BP
+    RET
+
+; TELA GAME OVER
+; Desenha um boneco no centro da tela com a cor do vencedor
+; e uma coroa amarela na cabeça.
+; Recebe: AX (1 = P1 vencedor, 2 = P2 vencedor)
+desenha_vencedor_go:
+    PUSH BP
+    MOV BP, SP
+    PUSH AX
+    PUSH BX
+    PUSH CX
+    PUSH DX
+
+    ; 1. Define as coordenadas fixas do centro da tela para o troféu/boneco
+    ; Coordenada base X: 320, Coordenada base Y: 220
+    MOV CX, 320
+    MOV DX, 220
+
+    ; 2. Avalia a cor do vencedor
+    CMP AX, 1
+    JE .pega_cor_p1
+    MOV AL, [cor_p2]
+    JMP .desenha_boneco
+.pega_cor_p1:
+    MOV AL, [cor_p1]
+
+.desenha_boneco:
+    MOV byte [cor], AL          ; Aplica a cor do jogador vencedor
+
+    ; Corpo do Lutador (Mesmas proporções do desenho normal, mas em posição central)
+    CIRCLE CX, 0, DX, 0           ; Cabeça
+    LINE CX, 0, DX, -10, 0, -35   ; Tronco/Corpo
+    LINE CX, 0, DX, -15, -10, -30 ; Braço Esquerdo levantado
+    LINE CX, 0, DX, -15, 10, -30  ; Braço Direito levantado
+    LINE CX, 0, DX, -35, -15, -65 ; Perna Esquerda
+    LINE CX, 0, DX, -35, 15, -65  ; Perna Direita
+
+    ; 3. Desenha a coroa amarela acima da cabeça
+    MOV byte [cor], 0Eh         ; 0Eh é amarelo para a coroa
+    
+    ; Desenha a coroa (linhas contínuas em cima da cabeça Y=+10 a Y=+20)
+    ; Base da coroa
+    LINE CX, -10, DX, 15, 10, 15
+    ; Lado esquerdo e pico
+    LINE CX, -10, DX, 15, -12, 25
+    LINE CX, -12, DX, 25, -5, 15
+    ; Pico central
+    LINE CX, -5, DX, 15, 0, 25
+    LINE CX, 0, DX, 25, 5, 15
+    ; Lado direito e pico
+    LINE CX, 5, DX, 15, 12, 25
+    LINE CX, 12, DX, 25, 10, 15
+
+    POP DX
+    POP CX
+    POP BX
     POP AX
     POP BP
     RET
