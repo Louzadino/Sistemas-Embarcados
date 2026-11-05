@@ -19,6 +19,8 @@ global contador
 global linhaPixel
 global colunaPixel
 
+extern vitorias_p1, vitorias_p2
+
 ; ==================================================
 ; FUNCAO: STATUS_JOGADORES
 ; Desenha os nomes, o VS e as barras de energia
@@ -68,6 +70,57 @@ status_jogadores:
     MOV AX, [energia_p2]
     MOV [energia_atual], AX
     CALL barra_de_energia
+
+    ; Placar P1 (Abaixo do nome do P1, próximo ao centro)
+    ; Primeiro Marcador P1
+    MOV BP, vazio
+    CMP word [vitorias_p1], 0  ; Se tem 0 vitórias, desenha vazio
+    JE .r1_p1_vazio
+    MOV BP, cheio              ; Se tem 1 ou mais, desenha cheio
+.r1_p1_vazio:
+    MOV CX, 1
+    MOV DH, 6                  ; linha 6 (abaixo da vida)
+    MOV DL, 34                 ; Coluna 34 (perto do meio da tela)
+    MOV BL, 0Eh                ; Amarelo
+    CALL escrever_na_tela
+
+    ; Segundo Marcador P1
+    MOV BP, vazio
+    CMP word [vitorias_p1], 2  ; Se tem menos de 2 vitórias, desenha vazio
+    JL .r2_p1_vazio
+    MOV BP, cheio              ; Se tem 2 vitórias, desenha cheio
+.r2_p1_vazio:
+    MOV CX, 1
+    MOV DH, 6                  
+    MOV DL, 32                 ; Coluna 32 (à esquerda do primeiro marcador)
+    MOV BL, 0Eh
+    CALL escrever_na_tela
+
+
+    ; Placar P2 (Abaixo do nome do P2, simétrico ao P1)
+    ; Primeiro Marcador P2
+    MOV BP, vazio
+    CMP word [vitorias_p2], 0  ; Se tem 0 vitórias, desenha vazio
+    JE .r1_p2_vazio
+    MOV BP, cheio
+.r1_p2_vazio:
+    MOV CX, 1
+    MOV DH, 6
+    MOV DL, 45                 ; Coluna 45
+    MOV BL, 0Eh
+    CALL escrever_na_tela
+
+    ; Segundo Marcador P2
+    MOV BP, vazio
+    CMP word [vitorias_p2], 2
+    JL .r2_p2_vazio
+    MOV BP, cheio
+.r2_p2_vazio:
+    MOV CX, 1
+    MOV DH, 6
+    MOV DL, 47                 ; Coluna 47 (à direita do primeiro marcador)
+    MOV BL, 0Eh
+    CALL escrever_na_tela
 
     POP BP
     POP DX
@@ -233,7 +286,11 @@ baseY       dw 0
 xAtual      dw 0
 yAtual      dw 0
 
-; Variaveis de controlo
+; Variáveis para o placar de rounds ganhos
+vazio       db 'O'      ; Marcador de round não ganho
+cheio       db 'X'      ; Marcador de round ganho
+
+; Variaveis de controle
 contador    dw 0
 linhaPixel  dw 0
 colunaPixel dw 0
