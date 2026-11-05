@@ -7,7 +7,8 @@ segment data
     global key_t, key_m, key_n, key_r
     global key_w, key_s, key_up, key_down
     global key_enter                      ; <-- 1. NOVO: Exporta a flag da tecla Enter
-    
+    global key_y
+
     key_a        db 0
     key_d        db 0
     key_left     db 0
@@ -21,8 +22,9 @@ segment data
     key_s        db 0
     key_up       db 0
     key_down     db 0
-    key_enter    db 0                      ; <-- 1. NOVO: Estado da tecla Enter (0=solta, 1=pressionada)
-    
+    key_enter    db 0                      
+    key_y        db 0
+
     ; Armazenamento do vetor original da interrupção de teclado do DOS
     velho_isr_off dw 0
     velho_isr_seg dw 0
@@ -231,20 +233,24 @@ continua_reseta_down:
 continua_reseta_down_k:
     CMP AL, 0A5h        ; Tecla K (Break)
     JNE continua_seta_enter           ; <-- 2. NOVO: Desvia para testar a tecla Enter
-    JMP reseta_down
+    JMP reseta_down 
 
-    ; -------------------------------------------------------------
-    ; TECLA ENTER (Scancode 1Ch / Break 9Ch) 
-    ; -------------------------------------------------------------
-continua_seta_enter:
+continua_seta_enter:    ; TECLA ENTER (Scancode 1Ch / Break 9Ch)
     CMP AL, 1Ch         ; Scancode Make da tecla Enter (Pressionada)
     JNE continua_reseta_enter
     JMP seta_enter
 continua_reseta_enter:
     CMP AL, 9Ch         ; Scancode Break da tecla Enter (Solta)
-    JNE continua_final
+    JNE continua_seta_y
     JMP reseta_enter
-
+continua_seta_y:        ; TECLA Y (Scancode Make 15h / Break 95h)
+    CMP AL, 15h         ; Scancode Make da tecla Y (Pressionada)
+    JNE continua_reseta_y
+    JMP seta_y
+continua_reseta_y:
+    CMP AL, 95h         ; Scancode Break da tecla Y (Solta)
+    JNE continua_final  ; Ou desvia para a próxima verificação (ex: continua_seta_enter)
+    JMP reseta_y
 continua_final:
     JMP fim_int9
 
@@ -324,13 +330,17 @@ seta_down:
 reseta_down:  
     MOV byte [key_down], 0
     JMP fim_int9
-
-; 3. NOVO: Manipuladores do estado da tecla Enter
 seta_enter:
     MOV byte [key_enter], 1
     JMP fim_int9
 reseta_enter:
     MOV byte [key_enter], 0
+    JMP fim_int9
+seta_y:
+    MOV byte [key_y], 1
+    JMP fim_int9
+reseta_y:
+    MOV byte [key_y], 0
     JMP fim_int9
 
 ; FIM DA INTERRUPÇÃO

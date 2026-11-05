@@ -1,0 +1,169 @@
+     1                                  ; =====================================================================
+     2                                  ; ARQUIVO: game_over.asm  (versão corrigida)
+     3                                  ; RESUMO: Tela de confirmação de saída / Game Over.
+     4                                  ;   Chamada pela main somente quando a tecla 'Q' é pressionada.
+     5                                  ;   Lê as teclas 'Y' (Sim) e 'N' (Não) pelas flags da ISR do teclado.
+     6                                  ; Retorno em AX:
+     7                                  ;   1 = Confirmou saída (encerrar o jogo)
+     8                                  ;   0 = Cancelou saída  (a tela foi limpa: a MAIN deve REDESENHAR o jogo)
+     9                                  ;
+    10                                  ; Layout (modo 12h, texto 80x30, tudo centralizado e igual à imagem):
+    11                                  ;   linha 11:  X  GAME OVER  X      (X vermelho, texto branco)
+    12                                  ;   linha 15:  TEM CERTEZA QUE DESEJA SAIR?
+    13                                  ;   linha 19:  Y - SIM
+    14                                  ;   linha 21:  N - NAO
+    15                                  ; =====================================================================
+    16                                  
+    17                                  segment data
+    18 00000000 58                          txt_x           db 'X'
+    19 00000001 47414D45204F564552          txt_titulo      db 'GAME OVER'                      ;  9
+    20 0000000A 54454D204345525445-         txt_pergunta    db 'TEM CERTEZA QUE DESEJA SAIR?'   ; 28
+    21 00000013 5A4120515545204445-
+    22 0000001C 53454A412053414952-
+    23 00000025 3F                 
+    24 00000026 59202D2053494D              txt_opcao_y     db 'Y - SIM'                        ;  7
+    25 0000002D 4E202D204E414F              txt_opcao_n     db 'N - NAO'                        ;  7
+    26 00000034 0000                        resultado       dw 0
+    27                                  
+    28                                  segment code
+    29                                      global game_over
+    30                                      extern escrever_na_tela
+    31                                      extern key_y, key_n, key_q         ; flags setadas pela ISR do teclado
+    32                                  
+    33                                  ; ---------------------------------------------------------------------
+    34                                  ; Macro: escreve texto. ptr, tamanho, linha, coluna, cor
+    35                                  ; ---------------------------------------------------------------------
+    36                                  %macro TEXTO 5
+    37                                      MOV BP, %1
+    38                                      MOV CX, %2
+    39                                      MOV DH, %3
+    40                                      MOV DL, %4
+    41                                      MOV BL, %5
+    42                                      CALL escreve
+    43                                  %endmacro
+    44                                  
+    45                                  ; =====================================================================
+    46                                  ; FUNÇÃO CENTRAL: GAME_OVER
+    47                                  ; =====================================================================
+    48                                  game_over:
+    49 00000000 60                          PUSHA
+    50 00000001 06                          PUSH ES
+    51                                  
+    52 00000002 1E                          PUSH DS                     ; ES = DS (INT 10h/13h lê a string em ES:BP)
+    53 00000003 07                          POP ES
+    54                                  
+    55                                      ; 1. Limpa a tela (modo gráfico VGA 640x480)
+    56 00000004 B81200                      MOV AX, 0012h
+    57 00000007 CD10                        INT 10h
+    58                                  
+    59                                      ; 2. Desenha a interface
+    60 00000009 E84B00                      CALL desenha_interface_game_over
+    61                                  
+    62                                      ; 3. Espera Y e N serem soltas (ignora tecla que já estava pressionada)
+    63                                  .espera_soltar:
+    64 0000000C 803E[0000]00                CMP byte [key_y], 0
+    65 00000011 75F9                        JNE .espera_soltar
+    66 00000013 803E[0000]00                CMP byte [key_n], 0
+    67 00000018 75F2                        JNE .espera_soltar
+    68                                  
+    69                                      ; 4. Espera a escolha
+    70                                  .loop_espera_tecla:
+    71 0000001A 803E[0000]01                CMP byte [key_y], 1
+    72 0000001F 740A                        JE .confirmou_saida
+    73 00000021 803E[0000]01                CMP byte [key_n], 1
+    74 00000026 740C                        JE .cancelou_saida
+    75 00000028 E9EFFF                      JMP .loop_espera_tecla
+    76                                  
+    77                                  .confirmou_saida:
+    78 0000002B C706[3400]0100              MOV word [resultado], 1
+    79 00000031 E91000                      JMP .fim
+    80                                  
+    81                                  .cancelou_saida:
+    82 00000034 B81200                      MOV AX, 0012h               ; Limpa a tela
+    83 00000037 CD10                        INT 10h
+    84                                      
+    85 00000039 C606[0000]00                MOV byte [key_q], 0         ; Reseta a flag key_q antes de retornar para a main
+    86 0000003E C706[3400]0000              MOV word [resultado], 0
+    87                                  
+    88                                  .fim:
+    89                                      ; Esvazia o buffer de teclado do BIOS (evita eco/beep após a saída)
+    90                                  .flush:
+    91 00000044 B401                        MOV AH, 01h
+    92 00000046 CD16                        INT 16h
+    93 00000048 7407                        JZ .flush_ok
+    94 0000004A B400                        MOV AH, 00h
+    95 0000004C CD16                        INT 16h
+    96 0000004E E9F3FF                      JMP .flush
+    97                                  .flush_ok:
+    98                                  
+    99 00000051 07                          POP ES
+   100 00000052 61                          POPA
+   101 00000053 A1[3400]                    MOV AX, [resultado]         ; POPA restaurou AX; carrega o retorno agora
+   102 00000056 C3                          RET
+   103                                  
+   104                                  ; =====================================================================
+   105                                  ; ROTINA: DESENHA_INTERFACE_GAME_OVER
+   106                                  ; =====================================================================
+   107                                  desenha_interface_game_over:
+   108 00000057 60                          PUSHA
+   109                                  
+   110                                      ; "X  GAME OVER  X" = 15 colunas -> começa na coluna 32
+   111                                      TEXTO txt_x,      1, 11, 32, 0Ch    ; X vermelho (esquerda)
+   112 00000058 BD[0000]            <1>     MOV BP, %1
+   113 0000005B B90100              <1>     MOV CX, %2
+   114 0000005E B60B                <1>     MOV DH, %3
+   115 00000060 B220                <1>     MOV DL, %4
+   116 00000062 B30C                <1>     MOV BL, %5
+   117 00000064 E84D00              <1>     CALL escreve
+   118                                      TEXTO txt_titulo, 9, 11, 35, 0Fh    ; GAME OVER branco
+   119 00000067 BD[0100]            <1>     MOV BP, %1
+   120 0000006A B90900              <1>     MOV CX, %2
+   121 0000006D B60B                <1>     MOV DH, %3
+   122 0000006F B223                <1>     MOV DL, %4
+   123 00000071 B30F                <1>     MOV BL, %5
+   124 00000073 E83E00              <1>     CALL escreve
+   125                                      TEXTO txt_x,      1, 11, 46, 0Ch    ; X vermelho (direita)
+   126 00000076 BD[0000]            <1>     MOV BP, %1
+   127 00000079 B90100              <1>     MOV CX, %2
+   128 0000007C B60B                <1>     MOV DH, %3
+   129 0000007E B22E                <1>     MOV DL, %4
+   130 00000080 B30C                <1>     MOV BL, %5
+   131 00000082 E82F00              <1>     CALL escreve
+   132                                  
+   133                                      ; 28 colunas -> começa na coluna 26
+   134                                      TEXTO txt_pergunta, 28, 15, 26, 0Fh
+   135 00000085 BD[0A00]            <1>     MOV BP, %1
+   136 00000088 B91C00              <1>     MOV CX, %2
+   137 0000008B B60F                <1>     MOV DH, %3
+   138 0000008D B21A                <1>     MOV DL, %4
+   139 0000008F B30F                <1>     MOV BL, %5
+   140 00000091 E82000              <1>     CALL escreve
+   141                                  
+   142                                      ; 7 colunas -> começa na coluna 36
+   143                                      TEXTO txt_opcao_y, 7, 19, 36, 0Fh
+   144 00000094 BD[2600]            <1>     MOV BP, %1
+   145 00000097 B90700              <1>     MOV CX, %2
+   146 0000009A B613                <1>     MOV DH, %3
+   147 0000009C B224                <1>     MOV DL, %4
+   148 0000009E B30F                <1>     MOV BL, %5
+   149 000000A0 E81100              <1>     CALL escreve
+   150                                      TEXTO txt_opcao_n, 7, 21, 36, 0Fh
+   151 000000A3 BD[2D00]            <1>     MOV BP, %1
+   152 000000A6 B90700              <1>     MOV CX, %2
+   153 000000A9 B615                <1>     MOV DH, %3
+   154 000000AB B224                <1>     MOV DL, %4
+   155 000000AD B30F                <1>     MOV BL, %5
+   156 000000AF E80200              <1>     CALL escreve
+   157                                  
+   158 000000B2 61                          POPA
+   159 000000B3 C3                          RET
+   160                                  
+   161                                  ; ---------------------------------------------------------------------
+   162                                  ; escreve: BP=string, CX=tamanho, DH=linha, DL=coluna, BL=cor
+   163                                  ; Preserva todos os registradores, independente de escrever_na_tela.
+   164                                  ; ---------------------------------------------------------------------
+   165                                  escreve:
+   166 000000B4 60                          PUSHA
+   167 000000B5 E8(0000)                    CALL escrever_na_tela
+   168 000000B8 61                          POPA
+   169 000000B9 C3                          RET

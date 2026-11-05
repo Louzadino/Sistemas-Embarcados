@@ -9,6 +9,7 @@
 ;
 ; Funções:
 ;   reset_timer   : reinicia em 03:00 (chame antes de cada partida)
+;   retoma_timer  : continua de onde parou, sem contar o tempo da pausa
 ;   timer         : atualiza o relógio; AX = 1 se chegou a 00:00, senão 0
 ;   desenha_timer : redesenha a string atual (chame a cada frame se o
 ;                   seu loop limpa a tela; 'timer' já chama por você)
@@ -18,7 +19,7 @@
 ; Acumulamos ticks*5 e descontamos 91 por segundo (erro < 0,04 %).
 ticks_x5_por_seg    equ 91
 max_delta_ticks     equ 200         ; limita saltos (pausa, travamento)
-cor_timer           equ 0Ch 
+cor_timer           equ 0Ch         ; vermelho claro VGA (use 04h p/ vermelho escuro)
 
 segment data
     minutos         dw 3
@@ -30,7 +31,7 @@ segment data
     str_timer       db '03:00'      ; texto exibido (5 caracteres)
 
 segment code
-    global timer, desenha_timer, reset_timer
+    global timer, desenha_timer, reset_timer, retoma_timer
     extern escrever_na_tela
 
 ; =====================================================================
@@ -45,6 +46,15 @@ reset_timer:
     MOV byte [str_timer + 1], '3'
     MOV byte [str_timer + 3], '0'
     MOV byte [str_timer + 4], '0'
+    RET
+
+; =====================================================================
+; RETOMA_TIMER: mantém o tempo atual, mas descarta o tempo decorrido
+; durante pausas (ex.: tela de game_over). Relê o tick base.
+; =====================================================================
+retoma_timer:
+    MOV word [acc_ticks], 0
+    MOV byte [iniciado], 0
     RET
 
 ; =====================================================================
@@ -119,7 +129,7 @@ timer:
     CALL formata_timer              ; atualiza 'str_timer'
 
 .desenha:
-    CALL desenha_timer              ; escreve em branco
+    CALL desenha_timer              ; escreve em vermelho
 
     MOV AX, [minutos]
     OR AX, [segundos]
@@ -169,7 +179,7 @@ formata_timer:
     RET
 
 ; =====================================================================
-; DESENHA_TIMER: escreve "MM:SS" em branco (sem parâmetros)
+; DESENHA_TIMER: escreve "MM:SS" em vermelho (sem parâmetros)
 ; =====================================================================
 desenha_timer:
     PUSH BX
@@ -179,7 +189,7 @@ desenha_timer:
     RET
 
 ; =====================================================================
-; ESCREVE_TIMER: BL = cor (0 apaga, 0Fh branco)
+; ESCREVE_TIMER: BL = cor (0 apaga, cor_timer vermelho)
 ; Linha 3, coluna 37. Garante ES = DS para o INT 10h/AH=13h (ES:BP).
 ; =====================================================================
 escreve_timer:

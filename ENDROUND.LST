@@ -1,0 +1,227 @@
+     1                                  ; =====================================================================
+     2                                  ; ARQUIVO: end_round.asm  (versão corrigida)
+     3                                  ; RESUMO: Exibe a tela de encerramento do round.
+     4                                  ; Recebe via pilha (stdcall, o próprio módulo limpa com RET 4):
+     5                                  ;   PUSH word [num_round]    ; [BP+6]  número do round (1 a 9)
+     6                                  ;   PUSH word [vencedor]     ; [BP+4]  0 = Empate, 1 = P1, 2 = P2
+     7                                  ;   CALL end_round
+     8                                  ; Qualquer outro valor de vencedor (ex.: 3 = Q) NÃO exibe nada.
+     9                                  ;
+    10                                  ; TEMPORIZAÇÃO: ~2 s medidos em ticks do BIOS (0040:006Ch, IRQ0 do PIT),
+    11                                  ; sem laços de atraso por software.
+    12                                  ; =====================================================================
+    13                                  
+    14                                  ; Como apagar os textos ao final:
+    15                                  ;   1 = reescreve os mesmos textos em preto (sem flicker; use se o fundo
+    16                                  ;       da região central for preto)
+    17                                  ;   0 = redesenha cenário + lutadores + HUD (use se o fundo for colorido;
+    18                                  ;       exige que desenha_cenario repinte as linhas 11 a 14)
+    19                                  %assign APAGA_COM_PRETO 1
+    20                                  
+    21                                  ticks_espera_end    equ 36      ; ~2 s (18,2 Hz * 2)
+    22                                  
+    23                                  segment data
+    24 00000000 46494D20444F203120-         txt_fim_round   db 'FIM DO 1 ROUND'         ; 14 caracteres; o dígito está em +7
+    25 00000009 524F554E44         
+    26 0000000E 5649544F5249412044-         txt_vit_p1      db 'VITORIA DO JOGADOR 1'   ; 20
+    27 00000017 4F204A4F4741444F52-
+    28 00000020 2031               
+    29 00000022 5649544F5249412044-         txt_vit_p2      db 'VITORIA DO JOGADOR 2'   ; 20
+    30 0000002B 4F204A4F4741444F52-
+    31 00000034 2032               
+    32 00000036 454D5041544521              txt_empate      db 'EMPATE!'                ;  7
+    33                                  
+    34 0000003D 0000                        ult_tick_end    dw 0
+    35                                  
+    36                                      ; Parâmetros copiados da pilha (BP é usado pela escrita de texto)
+    37 0000003F 0000                        num_round_val   dw 0
+    38 00000041 0000                        vencedor_val    dw 0
+    39                                  
+    40                                      ; Segunda mensagem escolhida conforme o vencedor
+    41 00000043 0000                        msg2_ptr        dw 0
+    42 00000045 0000                        msg2_len        dw 0
+    43 00000047 00                          msg2_col        db 0
+    44 00000048 00                          msg2_cor        db 0
+    45                                  
+    46                                  segment code
+    47                                      global end_round
+    48                                      extern escrever_na_tela, desenha_cenario, render_p1, render_p2
+    49                                      extern status_jogadores, desenha_timer
+    50                                  
+    51                                  ; ---------------------------------------------------------------------
+    52                                  ; Macro: escreve texto fixo. ptr, tamanho, linha, coluna, cor
+    53                                  ; Se DI = 0, escreve em preto (apaga); se DI <> 0, usa a cor pedida.
+    54                                  ; ---------------------------------------------------------------------
+    55                                  %macro MSG 5
+    56                                      MOV BP, %1
+    57                                      MOV CX, %2
+    58                                      MOV DH, %3
+    59                                      MOV DL, %4
+    60                                      MOV BL, %5
+    61                                      TEST DI, DI
+    62                                      JNZ %%com_cor
+    63                                      XOR BL, BL
+    64                                  %%com_cor:
+    65                                      CALL escreve
+    66                                  %endmacro
+    67                                  
+    68                                  ; =====================================================================
+    69                                  ; FUNÇÃO CENTRAL: END_ROUND
+    70                                  ; =====================================================================
+    71                                  end_round:
+    72 00000000 55                          PUSH BP
+    73 00000001 89E5                        MOV BP, SP
+    74 00000003 60                          PUSHA
+    75 00000004 06                          PUSH ES
+    76                                  
+    77                                      ; 1. Copia os parâmetros ANTES de BP ser reutilizado
+    78 00000005 8B4606                      MOV AX, [BP+6]
+    79 00000008 A3[3F00]                    MOV [num_round_val], AX
+    80 0000000B 8B4604                      MOV AX, [BP+4]
+    81 0000000E A3[4100]                    MOV [vencedor_val], AX
+    82                                  
+    83 00000011 1E                          PUSH DS                     ; ES = DS (INT 10h/13h lê a string em ES:BP)
+    84 00000012 07                          POP ES
+    85                                  
+    86                                      ; 2. Vencedor inválido (ex.: 3 = Q): não exibe nada
+    87 00000013 813E[4100]0200              CMP word [vencedor_val], 2
+    88 00000019 7771                        JA .fim
+    89                                  
+    90                                      ; 3. Formata "FIM DO N ROUND"
+    91 0000001B A1[3F00]                    MOV AX, [num_round_val]
+    92 0000001E 0430                        ADD AL, '0'
+    93 00000020 A2[0700]                    MOV [txt_fim_round + 7], AL
+    94                                  
+    95                                      ; 4. Escolhe a segunda mensagem
+    96 00000023 813E[4100]0100              CMP word [vencedor_val], 1
+    97 00000029 7421                        JE .vit_p1
+    98 0000002B 813E[4100]0200              CMP word [vencedor_val], 2
+    99 00000031 7432                        JE .vit_p2
+   100                                  
+   101 00000033 C706[4300][3600]            MOV word [msg2_ptr], txt_empate         ; Empate: vermelho claro
+   102 00000039 C706[4500]0700              MOV word [msg2_len], 7
+   103 0000003F C606[4700]24                MOV byte [msg2_col], 36                 ; (80-7)/2 = 36
+   104 00000044 C606[4800]0C                MOV byte [msg2_cor], 0Ch
+   105 00000049 E92F00                      JMP .mostra
+   106                                  .vit_p1:
+   107 0000004C C706[4300][0E00]            MOV word [msg2_ptr], txt_vit_p1         ; Vitória P1: verde claro
+   108 00000052 C706[4500]1400              MOV word [msg2_len], 20
+   109 00000058 C606[4700]1E                MOV byte [msg2_col], 30                 ; (80-20)/2 = 30
+   110 0000005D C606[4800]0A                MOV byte [msg2_cor], 0Ah
+   111 00000062 E91600                      JMP .mostra
+   112                                  .vit_p2:
+   113 00000065 C706[4300][2200]            MOV word [msg2_ptr], txt_vit_p2         ; Vitória P2: verde claro
+   114 0000006B C706[4500]1400              MOV word [msg2_len], 20
+   115 00000071 C606[4700]1E                MOV byte [msg2_col], 30
+   116 00000076 C606[4800]0A                MOV byte [msg2_cor], 0Ah
+   117                                  
+   118                                  .mostra:
+   119                                      ; 5. Fundo limpo (cenário, lutadores, HUD e timer)
+   120 0000007B E84D00                      CALL redesenha_base_end
+   121                                  
+   122                                      ; 6. Exibe as mensagens
+   123 0000007E BF0100                      MOV DI, 1
+   124 00000081 E80E00                      CALL desenha_msgs
+   125                                  
+   126                                      ; 7. Mantém na tela por ~2 s (relógio do PC)
+   127 00000084 E85600                      CALL espera_end_round
+   128                                  
+   129                                      ; 8. Apaga as mensagens
+   130                                  %if APAGA_COM_PRETO
+   131 00000087 31FF                        XOR DI, DI
+   132 00000089 E80600                      CALL desenha_msgs
+   133                                  %else
+   134                                      CALL redesenha_base_end
+   135                                  %endif
+   136                                  
+   137                                  .fim:
+   138 0000008C 07                          POP ES
+   139 0000008D 61                          POPA
+   140 0000008E 5D                          POP BP
+   141 0000008F C20400                      RET 4                       ; remove os 2 parâmetros (2 * 2 bytes)
+   142                                  
+   143                                  ; =====================================================================
+   144                                  ; DESENHA_MSGS: DI = 1 desenha colorido, DI = 0 apaga (preto)
+   145                                  ; Linha 11: "FIM DO N ROUND" (amarelo)   Linha 14: vitória/empate
+   146                                  ; =====================================================================
+   147                                  desenha_msgs:
+   148 00000092 60                          PUSHA
+   149                                  
+   150                                      MSG txt_fim_round, 14, 11, 33, 0Eh      ; (80-14)/2 = 33
+   151 00000093 BD[0000]            <1>     MOV BP, %1
+   152 00000096 B90E00              <1>     MOV CX, %2
+   153 00000099 B60B                <1>     MOV DH, %3
+   154 0000009B B221                <1>     MOV DL, %4
+   155 0000009D B30E                <1>     MOV BL, %5
+   156 0000009F 85FF                <1>     TEST DI, DI
+   157 000000A1 7502                <1>     JNZ %%com_cor
+   158 000000A3 30DB                <1>     XOR BL, BL
+   159                              <1> %%com_cor:
+   160 000000A5 E81D00              <1>     CALL escreve
+   161                                  
+   162 000000A8 8B2E[4300]                  MOV BP, [msg2_ptr]
+   163 000000AC 8B0E[4500]                  MOV CX, [msg2_len]
+   164 000000B0 B60E                        MOV DH, 14
+   165 000000B2 8A16[4700]                  MOV DL, [msg2_col]
+   166 000000B6 8A1E[4800]                  MOV BL, [msg2_cor]
+   167 000000BA 85FF                        TEST DI, DI
+   168 000000BC 7502                        JNZ .com_cor
+   169 000000BE 30DB                        XOR BL, BL
+   170                                  .com_cor:
+   171 000000C0 E80200                      CALL escreve
+   172                                  
+   173 000000C3 61                          POPA
+   174 000000C4 C3                          RET
+   175                                  
+   176                                  ; =====================================================================
+   177                                  ; ESCREVE: BP=string, CX=tamanho, DH=linha, DL=coluna, BL=cor
+   178                                  ; Preserva todos os registradores, independente de escrever_na_tela.
+   179                                  ; =====================================================================
+   180                                  escreve:
+   181 000000C5 60                          PUSHA
+   182 000000C6 E8(0000)                    CALL escrever_na_tela
+   183 000000C9 61                          POPA
+   184 000000CA C3                          RET
+   185                                  
+   186                                  ; =====================================================================
+   187                                  ; REDESENHA_BASE_END: cenário, lutadores, HUD e timer
+   188                                  ; =====================================================================
+   189                                  redesenha_base_end:
+   190 000000CB 60                          PUSHA
+   191 000000CC E8(0000)                    CALL desenha_cenario
+   192 000000CF E8(0000)                    CALL render_p1
+   193 000000D2 E8(0000)                    CALL render_p2
+   194 000000D5 E8(0000)                    CALL status_jogadores
+   195 000000D8 E8(0000)                    CALL desenha_timer
+   196 000000DB 61                          POPA
+   197 000000DC C3                          RET
+   198                                  
+   199                                  ; =====================================================================
+   200                                  ; ESPERA_END_ROUND: 36 ticks completos do BIOS (~2 s). Alinha primeiro
+   201                                  ; com a virada de um tick para a espera não ficar curta.
+   202                                  ; =====================================================================
+   203                                  espera_end_round:
+   204 000000DD 60                          PUSHA
+   205 000000DE E81A00                      CALL le_tick_end
+   206 000000E1 89C3                        MOV BX, AX
+   207                                  .alinha:
+   208 000000E3 E81500                      CALL le_tick_end
+   209 000000E6 39D8                        CMP AX, BX
+   210 000000E8 74F9                        JE .alinha
+   211 000000EA A3[3D00]                    MOV [ult_tick_end], AX
+   212                                  .loop_espera:
+   213 000000ED E80B00                      CALL le_tick_end
+   214 000000F0 2B06[3D00]                  SUB AX, [ult_tick_end]
+   215 000000F4 3D2400                      CMP AX, ticks_espera_end
+   216 000000F7 72F4                        JB .loop_espera
+   217 000000F9 61                          POPA
+   218 000000FA C3                          RET
+   219                                  
+   220                                  ; AX = word baixa do contador de ticks do BIOS
+   221                                  le_tick_end:
+   222 000000FB 06                          PUSH ES
+   223 000000FC B84000                      MOV AX, 0040h
+   224 000000FF 8EC0                        MOV ES, AX
+   225 00000101 26A16C00                    MOV AX, [ES:006Ch]
+   226 00000105 07                          POP ES
+   227 00000106 C3                          RET

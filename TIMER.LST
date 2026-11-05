@@ -9,198 +9,208 @@
      9                                  ;
     10                                  ; Funções:
     11                                  ;   reset_timer   : reinicia em 03:00 (chame antes de cada partida)
-    12                                  ;   timer         : atualiza o relógio; AX = 1 se chegou a 00:00, senão 0
-    13                                  ;   desenha_timer : redesenha a string atual (chame a cada frame se o
-    14                                  ;                   seu loop limpa a tela; 'timer' já chama por você)
-    15                                  ; =====================================================================
-    16                                  
-    17                                  ; 18,2065 ticks/s * 5 = 91,03  ->  91 "meio-ticks" (ticks*5) = 5 s / 5
-    18                                  ; Acumulamos ticks*5 e descontamos 91 por segundo (erro < 0,04 %).
-    19                                  ticks_x5_por_seg    equ 91
-    20                                  max_delta_ticks     equ 200         ; limita saltos (pausa, travamento)
-    21                                  cor_timer           equ 0Ch 
-    22                                  
-    23                                  segment data
-    24 00000000 0300                        minutos         dw 3
-    25 00000002 0000                        segundos        dw 0
-    26 00000004 0000                        ult_tick        dw 0            ; última leitura do contador do BIOS
-    27 00000006 0000                        acc_ticks       dw 0            ; acumulador (ticks * 5)
-    28 00000008 00                          iniciado        db 0            ; 0 = ainda não leu o tick inicial
-    29                                  
-    30 00000009 30333A3030                  str_timer       db '03:00'      ; texto exibido (5 caracteres)
-    31                                  
-    32                                  segment code
-    33                                      global timer, desenha_timer, reset_timer
-    34                                      extern escrever_na_tela
-    35                                  
-    36                                  ; =====================================================================
-    37                                  ; RESET_TIMER: volta para 03:00
-    38                                  ; =====================================================================
-    39                                  reset_timer:
-    40 00000000 C706[0000]0300              MOV word [minutos], 3
-    41 00000006 C706[0200]0000              MOV word [segundos], 0
-    42 0000000C C706[0600]0000              MOV word [acc_ticks], 0
-    43 00000012 C606[0800]00                MOV byte [iniciado], 0          ; o próximo 'timer' relê o tick base
-    44 00000017 C606[0900]30                MOV byte [str_timer + 0], '0'
-    45 0000001C C606[0A00]33                MOV byte [str_timer + 1], '3'
-    46 00000021 C606[0C00]30                MOV byte [str_timer + 3], '0'
-    47 00000026 C606[0D00]30                MOV byte [str_timer + 4], '0'
-    48 0000002B C3                          RET
-    49                                  
-    50                                  ; =====================================================================
-    51                                  ; TIMER
-    52                                  ; Retorna: AX = 1 se o tempo ACABOU (00:00), AX = 0 se ainda HÁ TEMPO.
-    53                                  ; =====================================================================
-    54                                  timer:
-    55 0000002C 53                          PUSH BX
-    56 0000002D 51                          PUSH CX
-    57 0000002E 52                          PUSH DX
-    58                                  
-    59                                      ; Primeira chamada após o reset: só registra o tick de referência
-    60 0000002F 803E[0800]01                CMP byte [iniciado], 1
-    61 00000034 740B                        JE .ja_iniciado
-    62 00000036 E8A000                      CALL le_tick
-    63 00000039 A3[0400]                    MOV [ult_tick], AX
-    64 0000003C C606[0800]01                MOV byte [iniciado], 1
-    65                                  .ja_iniciado:
-    66                                  
-    67                                      ; Já zerado antes? Só redesenha e sinaliza.
-    68 00000041 A1[0000]                    MOV AX, [minutos]
-    69 00000044 0B06[0200]                  OR AX, [segundos]
-    70 00000048 7477                        JZ .desenha
-    71                                  
-    72                                      ; --- ticks decorridos desde a última chamada (aritmética de 16 bits
-    73                                      ;     módulo 65536: correta mesmo quando o contador dá a volta) ---
-    74 0000004A E88C00                      CALL le_tick
-    75 0000004D 89C2                        MOV DX, AX
-    76 0000004F 2B16[0400]                  SUB DX, [ult_tick]
-    77 00000053 A3[0400]                    MOV [ult_tick], AX
-    78 00000056 81FAC800                    CMP DX, max_delta_ticks
-    79 0000005A 7603                        JBE .delta_ok
-    80 0000005C BAC800                      MOV DX, max_delta_ticks
-    81                                  .delta_ok:
-    82 0000005F 89D0                        MOV AX, DX
-    83 00000061 BB0500                      MOV BX, 5
-    84 00000064 F7E3                        MUL BX                          ; AX = delta * 5 (<= 1000)
-    85 00000066 0106[0600]                  ADD [acc_ticks], AX
-    86                                  
-    87 0000006A 31C9                        XOR CX, CX                      ; CX = 1 se algum segundo passou
-    88                                  .conta:
-    89 0000006C 813E[0600]5B00              CMP word [acc_ticks], ticks_x5_por_seg
-    90 00000072 7244                        JB .fim_conta
-    91 00000074 812E[0600]5B00              SUB word [acc_ticks], ticks_x5_por_seg
-    92                                  
-    93 0000007A 81F90000                    CMP CX, 0
-    94 0000007E 7508                        JNE .ja_apagou
-    95 00000080 B300                        MOV BL, 0                       ; apaga o texto antigo (preto)
-    96 00000082 E88800                      CALL escreve_timer
-    97 00000085 B90100                      MOV CX, 1
-    98                                  .ja_apagou:
-    99                                  
-   100                                      ; --- decrementa 1 segundo ---
-   101 00000088 813E[0200]0000              CMP word [segundos], 0
-   102 0000008E 7515                        JNE .dec_seg
-   103 00000090 813E[0000]0000              CMP word [minutos], 0
-   104 00000096 7420                        JE .fim_conta                   ; (proteção; não deve ocorrer)
-   105 00000098 FF0E[0000]                  DEC word [minutos]
-   106 0000009C C706[0200]3B00              MOV word [segundos], 59
-   107 000000A2 E90400                      JMP .checa_zero
-   108                                  .dec_seg:
-   109 000000A5 FF0E[0200]                  DEC word [segundos]
-   110                                  .checa_zero:
-   111 000000A9 A1[0000]                    MOV AX, [minutos]
-   112 000000AC 0B06[0200]                  OR AX, [segundos]
-   113 000000B0 75BA                        JNZ .conta                      ; ainda há tempo: processa mais segundos
-   114 000000B2 C706[0600]0000              MOV word [acc_ticks], 0         ; chegou a 00:00
-   115                                  
-   116                                  .fim_conta:
-   117 000000B8 81F90000                    CMP CX, 0
-   118 000000BC 7403                        JE .desenha
-   119 000000BE E82400                      CALL formata_timer              ; atualiza 'str_timer'
-   120                                  
-   121                                  .desenha:
-   122 000000C1 E84100                      CALL desenha_timer              ; escreve em branco
-   123                                  
-   124 000000C4 A1[0000]                    MOV AX, [minutos]
-   125 000000C7 0B06[0200]                  OR AX, [segundos]
-   126 000000CB 7506                        JNZ .tem_tempo
-   127 000000CD B80100                      MOV AX, 1                       ; 00:00 -> tempo esgotado (já neste frame)
-   128 000000D0 E90200                      JMP .fim
-   129                                  .tem_tempo:
-   130 000000D3 31C0                        XOR AX, AX
-   131                                  .fim:
-   132 000000D5 5A                          POP DX
-   133 000000D6 59                          POP CX
-   134 000000D7 5B                          POP BX
-   135 000000D8 C3                          RET
-   136                                  
-   137                                  ; =====================================================================
-   138                                  ; LE_TICK: AX = word baixa do contador de ticks do BIOS (0040:006C)
-   139                                  ; =====================================================================
-   140                                  le_tick:
-   141 000000D9 06                          PUSH ES
-   142 000000DA B84000                      MOV AX, 0040h
-   143 000000DD 8EC0                        MOV ES, AX
-   144 000000DF 26A16C00                    MOV AX, [ES:006Ch]
-   145 000000E3 07                          POP ES
-   146 000000E4 C3                          RET
-   147                                  
-   148                                  ; =====================================================================
-   149                                  ; FORMATA_TIMER: converte minutos/segundos para ASCII em 'str_timer'
-   150                                  ; =====================================================================
-   151                                  formata_timer:
-   152 000000E5 50                          PUSH AX
-   153 000000E6 53                          PUSH BX
-   154                                  
-   155 000000E7 A1[0000]                    MOV AX, [minutos]
-   156 000000EA 0430                        ADD AL, '0'
-   157 000000EC A2[0A00]                    MOV [str_timer + 1], AL         ; "0M"
-   158                                  
-   159 000000EF A1[0200]                    MOV AX, [segundos]              ; < 60, então AH = 0 e DIV BL é seguro
-   160 000000F2 B30A                        MOV BL, 10
-   161 000000F4 F6F3                        DIV BL                          ; AL = dezenas, AH = unidades
-   162 000000F6 0430                        ADD AL, '0'
-   163 000000F8 A2[0C00]                    MOV [str_timer + 3], AL
-   164 000000FB 80C430                      ADD AH, '0'
-   165 000000FE 8826[0D00]                  MOV [str_timer + 4], AH
-   166                                  
-   167 00000102 5B                          POP BX
-   168 00000103 58                          POP AX
-   169 00000104 C3                          RET
-   170                                  
-   171                                  ; =====================================================================
-   172                                  ; DESENHA_TIMER: escreve "MM:SS" em branco (sem parâmetros)
-   173                                  ; =====================================================================
-   174                                  desenha_timer:
-   175 00000105 53                          PUSH BX
-   176 00000106 B30C                        MOV BL, cor_timer
-   177 00000108 E80200                      CALL escreve_timer
-   178 0000010B 5B                          POP BX
-   179 0000010C C3                          RET
+    12                                  ;   retoma_timer  : continua de onde parou, sem contar o tempo da pausa
+    13                                  ;   timer         : atualiza o relógio; AX = 1 se chegou a 00:00, senão 0
+    14                                  ;   desenha_timer : redesenha a string atual (chame a cada frame se o
+    15                                  ;                   seu loop limpa a tela; 'timer' já chama por você)
+    16                                  ; =====================================================================
+    17                                  
+    18                                  ; 18,2065 ticks/s * 5 = 91,03  ->  91 "meio-ticks" (ticks*5) = 5 s / 5
+    19                                  ; Acumulamos ticks*5 e descontamos 91 por segundo (erro < 0,04 %).
+    20                                  ticks_x5_por_seg    equ 91
+    21                                  max_delta_ticks     equ 200         ; limita saltos (pausa, travamento)
+    22                                  cor_timer           equ 0Ch         ; vermelho claro VGA (use 04h p/ vermelho escuro)
+    23                                  
+    24                                  segment data
+    25 00000000 0300                        minutos         dw 3
+    26 00000002 0000                        segundos        dw 0
+    27 00000004 0000                        ult_tick        dw 0            ; última leitura do contador do BIOS
+    28 00000006 0000                        acc_ticks       dw 0            ; acumulador (ticks * 5)
+    29 00000008 00                          iniciado        db 0            ; 0 = ainda não leu o tick inicial
+    30                                  
+    31 00000009 30333A3030                  str_timer       db '03:00'      ; texto exibido (5 caracteres)
+    32                                  
+    33                                  segment code
+    34                                      global timer, desenha_timer, reset_timer, retoma_timer
+    35                                      extern escrever_na_tela
+    36                                  
+    37                                  ; =====================================================================
+    38                                  ; RESET_TIMER: volta para 03:00
+    39                                  ; =====================================================================
+    40                                  reset_timer:
+    41 00000000 C706[0000]0300              MOV word [minutos], 3
+    42 00000006 C706[0200]0000              MOV word [segundos], 0
+    43 0000000C C706[0600]0000              MOV word [acc_ticks], 0
+    44 00000012 C606[0800]00                MOV byte [iniciado], 0          ; o próximo 'timer' relê o tick base
+    45 00000017 C606[0900]30                MOV byte [str_timer + 0], '0'
+    46 0000001C C606[0A00]33                MOV byte [str_timer + 1], '3'
+    47 00000021 C606[0C00]30                MOV byte [str_timer + 3], '0'
+    48 00000026 C606[0D00]30                MOV byte [str_timer + 4], '0'
+    49 0000002B C3                          RET
+    50                                  
+    51                                  ; =====================================================================
+    52                                  ; RETOMA_TIMER: mantém o tempo atual, mas descarta o tempo decorrido
+    53                                  ; durante pausas (ex.: tela de game_over). Relê o tick base.
+    54                                  ; =====================================================================
+    55                                  retoma_timer:
+    56 0000002C C706[0600]0000              MOV word [acc_ticks], 0
+    57 00000032 C606[0800]00                MOV byte [iniciado], 0
+    58 00000037 C3                          RET
+    59                                  
+    60                                  ; =====================================================================
+    61                                  ; TIMER
+    62                                  ; Retorna: AX = 1 se o tempo ACABOU (00:00), AX = 0 se ainda HÁ TEMPO.
+    63                                  ; =====================================================================
+    64                                  timer:
+    65 00000038 53                          PUSH BX
+    66 00000039 51                          PUSH CX
+    67 0000003A 52                          PUSH DX
+    68                                  
+    69                                      ; Primeira chamada após o reset: só registra o tick de referência
+    70 0000003B 803E[0800]01                CMP byte [iniciado], 1
+    71 00000040 740B                        JE .ja_iniciado
+    72 00000042 E8A000                      CALL le_tick
+    73 00000045 A3[0400]                    MOV [ult_tick], AX
+    74 00000048 C606[0800]01                MOV byte [iniciado], 1
+    75                                  .ja_iniciado:
+    76                                  
+    77                                      ; Já zerado antes? Só redesenha e sinaliza.
+    78 0000004D A1[0000]                    MOV AX, [minutos]
+    79 00000050 0B06[0200]                  OR AX, [segundos]
+    80 00000054 7477                        JZ .desenha
+    81                                  
+    82                                      ; --- ticks decorridos desde a última chamada (aritmética de 16 bits
+    83                                      ;     módulo 65536: correta mesmo quando o contador dá a volta) ---
+    84 00000056 E88C00                      CALL le_tick
+    85 00000059 89C2                        MOV DX, AX
+    86 0000005B 2B16[0400]                  SUB DX, [ult_tick]
+    87 0000005F A3[0400]                    MOV [ult_tick], AX
+    88 00000062 81FAC800                    CMP DX, max_delta_ticks
+    89 00000066 7603                        JBE .delta_ok
+    90 00000068 BAC800                      MOV DX, max_delta_ticks
+    91                                  .delta_ok:
+    92 0000006B 89D0                        MOV AX, DX
+    93 0000006D BB0500                      MOV BX, 5
+    94 00000070 F7E3                        MUL BX                          ; AX = delta * 5 (<= 1000)
+    95 00000072 0106[0600]                  ADD [acc_ticks], AX
+    96                                  
+    97 00000076 31C9                        XOR CX, CX                      ; CX = 1 se algum segundo passou
+    98                                  .conta:
+    99 00000078 813E[0600]5B00              CMP word [acc_ticks], ticks_x5_por_seg
+   100 0000007E 7244                        JB .fim_conta
+   101 00000080 812E[0600]5B00              SUB word [acc_ticks], ticks_x5_por_seg
+   102                                  
+   103 00000086 81F90000                    CMP CX, 0
+   104 0000008A 7508                        JNE .ja_apagou
+   105 0000008C B300                        MOV BL, 0                       ; apaga o texto antigo (preto)
+   106 0000008E E88800                      CALL escreve_timer
+   107 00000091 B90100                      MOV CX, 1
+   108                                  .ja_apagou:
+   109                                  
+   110                                      ; --- decrementa 1 segundo ---
+   111 00000094 813E[0200]0000              CMP word [segundos], 0
+   112 0000009A 7515                        JNE .dec_seg
+   113 0000009C 813E[0000]0000              CMP word [minutos], 0
+   114 000000A2 7420                        JE .fim_conta                   ; (proteção; não deve ocorrer)
+   115 000000A4 FF0E[0000]                  DEC word [minutos]
+   116 000000A8 C706[0200]3B00              MOV word [segundos], 59
+   117 000000AE E90400                      JMP .checa_zero
+   118                                  .dec_seg:
+   119 000000B1 FF0E[0200]                  DEC word [segundos]
+   120                                  .checa_zero:
+   121 000000B5 A1[0000]                    MOV AX, [minutos]
+   122 000000B8 0B06[0200]                  OR AX, [segundos]
+   123 000000BC 75BA                        JNZ .conta                      ; ainda há tempo: processa mais segundos
+   124 000000BE C706[0600]0000              MOV word [acc_ticks], 0         ; chegou a 00:00
+   125                                  
+   126                                  .fim_conta:
+   127 000000C4 81F90000                    CMP CX, 0
+   128 000000C8 7403                        JE .desenha
+   129 000000CA E82400                      CALL formata_timer              ; atualiza 'str_timer'
+   130                                  
+   131                                  .desenha:
+   132 000000CD E84100                      CALL desenha_timer              ; escreve em vermelho
+   133                                  
+   134 000000D0 A1[0000]                    MOV AX, [minutos]
+   135 000000D3 0B06[0200]                  OR AX, [segundos]
+   136 000000D7 7506                        JNZ .tem_tempo
+   137 000000D9 B80100                      MOV AX, 1                       ; 00:00 -> tempo esgotado (já neste frame)
+   138 000000DC E90200                      JMP .fim
+   139                                  .tem_tempo:
+   140 000000DF 31C0                        XOR AX, AX
+   141                                  .fim:
+   142 000000E1 5A                          POP DX
+   143 000000E2 59                          POP CX
+   144 000000E3 5B                          POP BX
+   145 000000E4 C3                          RET
+   146                                  
+   147                                  ; =====================================================================
+   148                                  ; LE_TICK: AX = word baixa do contador de ticks do BIOS (0040:006C)
+   149                                  ; =====================================================================
+   150                                  le_tick:
+   151 000000E5 06                          PUSH ES
+   152 000000E6 B84000                      MOV AX, 0040h
+   153 000000E9 8EC0                        MOV ES, AX
+   154 000000EB 26A16C00                    MOV AX, [ES:006Ch]
+   155 000000EF 07                          POP ES
+   156 000000F0 C3                          RET
+   157                                  
+   158                                  ; =====================================================================
+   159                                  ; FORMATA_TIMER: converte minutos/segundos para ASCII em 'str_timer'
+   160                                  ; =====================================================================
+   161                                  formata_timer:
+   162 000000F1 50                          PUSH AX
+   163 000000F2 53                          PUSH BX
+   164                                  
+   165 000000F3 A1[0000]                    MOV AX, [minutos]
+   166 000000F6 0430                        ADD AL, '0'
+   167 000000F8 A2[0A00]                    MOV [str_timer + 1], AL         ; "0M"
+   168                                  
+   169 000000FB A1[0200]                    MOV AX, [segundos]              ; < 60, então AH = 0 e DIV BL é seguro
+   170 000000FE B30A                        MOV BL, 10
+   171 00000100 F6F3                        DIV BL                          ; AL = dezenas, AH = unidades
+   172 00000102 0430                        ADD AL, '0'
+   173 00000104 A2[0C00]                    MOV [str_timer + 3], AL
+   174 00000107 80C430                      ADD AH, '0'
+   175 0000010A 8826[0D00]                  MOV [str_timer + 4], AH
+   176                                  
+   177 0000010E 5B                          POP BX
+   178 0000010F 58                          POP AX
+   179 00000110 C3                          RET
    180                                  
    181                                  ; =====================================================================
-   182                                  ; ESCREVE_TIMER: BL = cor (0 apaga, 0Fh branco)
-   183                                  ; Linha 3, coluna 37. Garante ES = DS para o INT 10h/AH=13h (ES:BP).
-   184                                  ; =====================================================================
-   185                                  escreve_timer:
-   186 0000010D 50                          PUSH AX
-   187 0000010E 51                          PUSH CX
-   188 0000010F 52                          PUSH DX
-   189 00000110 55                          PUSH BP
-   190 00000111 06                          PUSH ES
-   191                                  
-   192 00000112 1E                          PUSH DS
-   193 00000113 07                          POP ES
-   194                                  
-   195 00000114 BD[0900]                    MOV BP, str_timer
-   196 00000117 B90500                      MOV CX, 5
-   197 0000011A B603                        MOV DH, 3
-   198 0000011C B225                        MOV DL, 37
-   199 0000011E E8(0000)                    CALL escrever_na_tela
-   200                                  
-   201 00000121 07                          POP ES
-   202 00000122 5D                          POP BP
-   203 00000123 5A                          POP DX
-   204 00000124 59                          POP CX
-   205 00000125 58                          POP AX
-   206 00000126 C3                          RET
+   182                                  ; DESENHA_TIMER: escreve "MM:SS" em vermelho (sem parâmetros)
+   183                                  ; =====================================================================
+   184                                  desenha_timer:
+   185 00000111 53                          PUSH BX
+   186 00000112 B30C                        MOV BL, cor_timer
+   187 00000114 E80200                      CALL escreve_timer
+   188 00000117 5B                          POP BX
+   189 00000118 C3                          RET
+   190                                  
+   191                                  ; =====================================================================
+   192                                  ; ESCREVE_TIMER: BL = cor (0 apaga, cor_timer vermelho)
+   193                                  ; Linha 3, coluna 37. Garante ES = DS para o INT 10h/AH=13h (ES:BP).
+   194                                  ; =====================================================================
+   195                                  escreve_timer:
+   196 00000119 50                          PUSH AX
+   197 0000011A 51                          PUSH CX
+   198 0000011B 52                          PUSH DX
+   199 0000011C 55                          PUSH BP
+   200 0000011D 06                          PUSH ES
+   201                                  
+   202 0000011E 1E                          PUSH DS
+   203 0000011F 07                          POP ES
+   204                                  
+   205 00000120 BD[0900]                    MOV BP, str_timer
+   206 00000123 B90500                      MOV CX, 5
+   207 00000126 B603                        MOV DH, 3
+   208 00000128 B225                        MOV DL, 37
+   209 0000012A E8(0000)                    CALL escrever_na_tela
+   210                                  
+   211 0000012D 07                          POP ES
+   212 0000012E 5D                          POP BP
+   213 0000012F 5A                          POP DX
+   214 00000130 59                          POP CX
+   215 00000131 58                          POP AX
+   216 00000132 C3                          RET

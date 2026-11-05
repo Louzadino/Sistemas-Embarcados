@@ -1,0 +1,182 @@
+     1                                  ; =====================================================================
+     2                                  ; ARQUIVO: ini_round.asm  (versão corrigida)
+     3                                  ; RESUMO: Animação/contagem regressiva de início de round:
+     4                                  ;         3... 2... 1... ROUND N!
+     5                                  ;
+     6                                  ; Parâmetro: AX = número do round (1 a 9). Retorno normal (RET).
+     7                                  ;
+     8                                  ; TEMPORIZAÇÃO: cada etapa dura 18 ticks do BIOS (0040:006Ch, IRQ0 do
+     9                                  ; PIT, ~1 s), sem laços de atraso por software.
+    10                                  ; =====================================================================
+    11                                  
+    12                                  ; Como apagar o texto de cada etapa:
+    13                                  ;   1 = reescreve o mesmo texto em preto (rápido, sem flicker; use se o
+    14                                  ;       fundo da região central for preto)
+    15                                  ;   0 = redesenha cenário + lutadores + HUD (use se o fundo for colorido;
+    16                                  ;       exige que desenha_cenario repinte a área central)
+    17                                  %assign APAGA_COM_PRETO 1
+    18                                  
+    19                                  linha_msg           equ 14      ; centro vertical (30 linhas de texto)
+    20                                  ticks_espera        equ 18      ; ~1 segundo por etapa (18,2 Hz)
+    21                                  
+    22                                  segment data
+    23 00000000 524F554E44202021            num_round_str   db 'ROUND  !'       ; 8 caracteres; o dígito entra em +6
+    24 00000008 33                          txt_3           db '3'
+    25 00000009 32                          txt_2           db '2'
+    26 0000000A 31                          txt_1           db '1'
+    27 0000000B 0000                        ult_tick_ini    dw 0
+    28                                  
+    29                                  segment code
+    30                                      global ini_round
+    31                                      extern escrever_na_tela, desenha_cenario, render_p1, render_p2
+    32                                      extern status_jogadores, desenha_timer
+    33                                  
+    34                                  ; ---------------------------------------------------------------------
+    35                                  ; Macro: mostra um texto, espera 1 s e apaga.
+    36                                  ; ptr, tamanho, coluna, cor
+    37                                  ; ---------------------------------------------------------------------
+    38                                  %macro ETAPA 4
+    39                                      MOV BP, %1
+    40                                      MOV CX, %2
+    41                                      MOV DH, linha_msg
+    42                                      MOV DL, %3
+    43                                      MOV BL, %4
+    44                                      CALL escreve
+    45                                      CALL espera_1_segundo
+    46                                  %if APAGA_COM_PRETO
+    47                                      MOV BL, 0                   ; mesmo texto, mesma posição, em preto
+    48                                      CALL escreve
+    49                                  %else
+    50                                      CALL redesenha_base
+    51                                  %endif
+    52                                  %endmacro
+    53                                  
+    54                                  ; =====================================================================
+    55                                  ; FUNÇÃO CENTRAL: INI_ROUND   (AX = número do round)
+    56                                  ; =====================================================================
+    57                                  ini_round:
+    58 00000000 60                          PUSHA
+    59 00000001 06                          PUSH ES
+    60                                  
+    61 00000002 1E                          PUSH DS                     ; ES = DS (INT 10h/13h lê a string em ES:BP)
+    62 00000003 07                          POP ES
+    63                                  
+    64 00000004 0430                        ADD AL, '0'                 ; número do round -> ASCII
+    65 00000006 A2[0600]                    MOV [num_round_str + 6], AL
+    66                                  
+    67                                      ; Estado inicial do cenário, lutadores e HUD
+    68 00000009 E86500                      CALL redesenha_base
+    69                                  
+    70                                      ETAPA txt_3, 1, 39, 0Ch     ; 3  vermelho claro
+    71 0000000C BD[0800]            <1>     MOV BP, %1
+    72 0000000F B90100              <1>     MOV CX, %2
+    73 00000012 B60E                <1>     MOV DH, linha_msg
+    74 00000014 B227                <1>     MOV DL, %3
+    75 00000016 B30C                <1>     MOV BL, %4
+    76 00000018 E85000              <1>     CALL escreve
+    77 0000001B E86500              <1>     CALL espera_1_segundo
+    78                              <1> %if APAGA_COM_PRETO
+    79 0000001E B300                <1>     MOV BL, 0
+    80 00000020 E84800              <1>     CALL escreve
+    81                              <1> %else
+    82                              <1>     CALL redesenha_base
+    83                              <1> %endif
+    84                                      ETAPA txt_2, 1, 39, 0Eh     ; 2  amarelo
+    85 00000023 BD[0900]            <1>     MOV BP, %1
+    86 00000026 B90100              <1>     MOV CX, %2
+    87 00000029 B60E                <1>     MOV DH, linha_msg
+    88 0000002B B227                <1>     MOV DL, %3
+    89 0000002D B30E                <1>     MOV BL, %4
+    90 0000002F E83900              <1>     CALL escreve
+    91 00000032 E84E00              <1>     CALL espera_1_segundo
+    92                              <1> %if APAGA_COM_PRETO
+    93 00000035 B300                <1>     MOV BL, 0
+    94 00000037 E83100              <1>     CALL escreve
+    95                              <1> %else
+    96                              <1>     CALL redesenha_base
+    97                              <1> %endif
+    98                                      ETAPA txt_1, 1, 39, 0Ah     ; 1  verde claro
+    99 0000003A BD[0A00]            <1>     MOV BP, %1
+   100 0000003D B90100              <1>     MOV CX, %2
+   101 00000040 B60E                <1>     MOV DH, linha_msg
+   102 00000042 B227                <1>     MOV DL, %3
+   103 00000044 B30A                <1>     MOV BL, %4
+   104 00000046 E82200              <1>     CALL escreve
+   105 00000049 E83700              <1>     CALL espera_1_segundo
+   106                              <1> %if APAGA_COM_PRETO
+   107 0000004C B300                <1>     MOV BL, 0
+   108 0000004E E81A00              <1>     CALL escreve
+   109                              <1> %else
+   110                              <1>     CALL redesenha_base
+   111                              <1> %endif
+   112                                      ETAPA num_round_str, 8, 36, 0Fh   ; "ROUND N!" branco, (80-8)/2 = 36
+   113 00000051 BD[0000]            <1>     MOV BP, %1
+   114 00000054 B90800              <1>     MOV CX, %2
+   115 00000057 B60E                <1>     MOV DH, linha_msg
+   116 00000059 B224                <1>     MOV DL, %3
+   117 0000005B B30F                <1>     MOV BL, %4
+   118 0000005D E80B00              <1>     CALL escreve
+   119 00000060 E82000              <1>     CALL espera_1_segundo
+   120                              <1> %if APAGA_COM_PRETO
+   121 00000063 B300                <1>     MOV BL, 0
+   122 00000065 E80300              <1>     CALL escreve
+   123                              <1> %else
+   124                              <1>     CALL redesenha_base
+   125                              <1> %endif
+   126                                  
+   127 00000068 07                          POP ES
+   128 00000069 61                          POPA
+   129 0000006A C3                          RET
+   130                                  
+   131                                  ; =====================================================================
+   132                                  ; ESCREVE: BP=string, CX=tamanho, DH=linha, DL=coluna, BL=cor
+   133                                  ; Preserva todos os registradores, independente de escrever_na_tela.
+   134                                  ; =====================================================================
+   135                                  escreve:
+   136 0000006B 60                          PUSHA
+   137 0000006C E8(0000)                    CALL escrever_na_tela
+   138 0000006F 61                          POPA
+   139 00000070 C3                          RET
+   140                                  
+   141                                  ; =====================================================================
+   142                                  ; REDESENHA_BASE: cenário, lutadores, HUD e timer
+   143                                  ; =====================================================================
+   144                                  redesenha_base:
+   145 00000071 60                          PUSHA
+   146 00000072 E8(0000)                    CALL desenha_cenario
+   147 00000075 E8(0000)                    CALL render_p1
+   148 00000078 E8(0000)                    CALL render_p2
+   149 0000007B E8(0000)                    CALL status_jogadores
+   150 0000007E E8(0000)                    CALL desenha_timer
+   151 00000081 61                          POPA
+   152 00000082 C3                          RET
+   153                                  
+   154                                  ; =====================================================================
+   155                                  ; ESPERA_1_SEGUNDO: 18 ticks completos do BIOS (~1 s), sem laço de delay.
+   156                                  ; Primeiro alinha com a virada de um tick, para a espera não ser curta.
+   157                                  ; =====================================================================
+   158                                  espera_1_segundo:
+   159 00000083 60                          PUSHA
+   160 00000084 E81A00                      CALL le_tick_ini
+   161 00000087 89C3                        MOV BX, AX
+   162                                  .alinha:
+   163 00000089 E81500                      CALL le_tick_ini
+   164 0000008C 39D8                        CMP AX, BX
+   165 0000008E 74F9                        JE .alinha
+   166 00000090 A3[0B00]                    MOV [ult_tick_ini], AX      ; base = início exato de um tick
+   167                                  .loop_espera:
+   168 00000093 E80B00                      CALL le_tick_ini
+   169 00000096 2B06[0B00]                  SUB AX, [ult_tick_ini]
+   170 0000009A 3D1200                      CMP AX, ticks_espera
+   171 0000009D 72F4                        JB .loop_espera
+   172 0000009F 61                          POPA
+   173 000000A0 C3                          RET
+   174                                  
+   175                                  ; AX = word baixa do contador de ticks do BIOS
+   176                                  le_tick_ini:
+   177 000000A1 06                          PUSH ES
+   178 000000A2 B84000                      MOV AX, 0040h
+   179 000000A5 8EC0                        MOV ES, AX
+   180 000000A7 26A16C00                    MOV AX, [ES:006Ch]
+   181 000000AB 07                          POP ES
+   182 000000AC C3                          RET

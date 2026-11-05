@@ -1,0 +1,212 @@
+     1                                  ; =====================================================================
+     2                                  ; ARQUIVO: round.asm  (versão corrigida)
+     3                                  ; RESUMO: Gerencia a execução de um round.
+     4                                  ; Controla o ciclo de combate, bloqueia entradas pré-round e determina
+     5                                  ; o vencedor ao término do tempo (3 min) ou por nocaute (KO).
+     6                                  ;
+     7                                  ; TEMPORIZAÇÃO: o framerate e o bloqueio pré-round usam o contador de
+     8                                  ; ticks do BIOS (0040:006Ch, incrementado pela IRQ0 do PIT), sem laços
+     9                                  ; de atraso por software.
+    10                                  ;
+    11                                  ; Retorno em AX:
+    12                                  ;   0 = Empate
+    13                                  ;   1 = Vitória do Jogador 1
+    14                                  ;   2 = Vitória do Jogador 2
+    15                                  ;   3 = Jogador apertou Q (a MAIN deve chamar game_over)
+    16                                  ;
+    17                                  ; Uso pela MAIN:
+    18                                  ;   - Round novo:   zerar 'round_retomando' (=0), restaurar as energias
+    19                                  ;                   e chamar round.
+    20                                  ;   - Após Q:       chamar game_over; se AX = 0 (cancelou), setar
+    21                                  ;                   'round_retomando' = 1 e chamar round de novo.
+    22                                  ;                   (energias e timer são mantidos; a tela é redesenhada)
+    23                                  ; =====================================================================
+    24                                  
+    25                                  pre_round_ticks     equ 18      ; ~1 s de bloqueio de teclas em round novo
+    26                                  retomada_ticks      equ 5       ; ~0,3 s ao retomar depois do game_over
+    27                                  
+    28                                  segment data
+    29                                      global vencedor_round, round_retomando
+    30 00000000 0000                        vencedor_round  dw 0        ; 0 = Empate, 1 = P1 Venceu, 2 = P2 Venceu
+    31 00000002 0000                        round_retomando dw 0        ; 0 = round novo, 1 = retomando após Q/N
+    32 00000004 0000                        resultado       dw 0        ; valor devolvido em AX
+    33 00000006 0000                        ult_frame       dw 0        ; último tick usado para sincronizar o frame
+    34 00000008 0000                        base_tick       dw 0        ; tick de referência do bloqueio pré-round
+    35                                  
+    36                                  segment code
+    37                                      global round
+    38                                  
+    39                                      extern atualiza_movimento, verifica_ataques
+    40                                      extern apaga_lutadores, desenha_cenario
+    41                                      extern render_p1, render_p2, status_jogadores
+    42                                      extern timer, desenha_timer, reset_timer, retoma_timer
+    43                                  
+    44                                      extern energia_p1, energia_p2
+    45                                      extern key_a, key_d, key_left, key_right
+    46                                      extern key_w, key_s, key_up, key_down
+    47                                      extern key_t, key_m, key_n, key_r
+    48                                      extern key_q
+    49                                  
+    50                                  ; =====================================================================
+    51                                  ; FUNÇÃO CENTRAL: ROUND
+    52                                  ; =====================================================================
+    53                                  round:
+    54 00000000 60                          PUSHA
+    55                                  
+    56                                      ; --- Round novo x retomada ---
+    57 00000001 813E[0200]0000              CMP word [round_retomando], 0
+    58 00000007 7509                        JNE .retomando
+    59 00000009 E8(0000)                    CALL reset_timer            ; round novo: 03:00
+    60 0000000C B91200                      MOV CX, pre_round_ticks
+    61 0000000F E90600                      JMP .pre_round
+    62                                  .retomando:
+    63 00000012 E8(0000)                    CALL retoma_timer           ; mantém o tempo; só ressincroniza o tick base
+    64 00000015 B90500                      MOV CX, retomada_ticks
+    65                                  
+    66                                  .pre_round:
+    67 00000018 C706[0200]0000              MOV word [round_retomando], 0
+    68                                  
+    69                                      ; --- Bloqueio de teclas pré-round: durante CX ticks, descarta todas
+    70                                      ;     as entradas (inclusive Q), medido pelo relógio do PC ---
+    71 0000001E E8B100                      CALL le_tick_round
+    72 00000021 A3[0800]                    MOV [base_tick], AX
+    73                                  .bloqueio:
+    74 00000024 E8D400                      CALL reseta_teclas_entrada
+    75 00000027 E8A800                      CALL le_tick_round
+    76 0000002A 2B06[0800]                  SUB AX, [base_tick]
+    77 0000002E 39C8                        CMP AX, CX
+    78 00000030 72F2                        JB .bloqueio
+    79                                  
+    80                                      ; --- Frame inicial (a tela pode ter sido limpa pelo game_over) ---
+    81 00000032 E8(0000)                    CALL desenha_cenario
+    82 00000035 E8(0000)                    CALL render_p1
+    83 00000038 E8(0000)                    CALL render_p2
+    84 0000003B E8(0000)                    CALL status_jogadores
+    85 0000003E E8(0000)                    CALL desenha_timer
+    86                                  
+    87 00000041 E88E00                      CALL le_tick_round
+    88 00000044 A3[0600]                    MOV [ult_frame], AX
+    89                                  
+    90                                  ; =====================================================================
+    91                                  ; LAÇO PRINCIPAL DO ROUND
+    92                                  ; =====================================================================
+    93                                  .loop_round:
+    94 00000047 E87100                      CALL espera_frame           ; sincroniza com o relógio do PC (PIT)
+    95                                  
+    96                                      ; --- Tecla Q: sai do round SEM computar vencedor ---
+    97 0000004A 803E[0000]01                CMP byte [key_q], 1
+    98 0000004F 7509                        JNE .combate
+    99 00000051 C706[0400]0300              MOV word [resultado], 3
+   100 00000057 E95C00                      JMP .fim
+   101                                  
+   102                                  .combate:
+   103 0000005A E8(0000)                    CALL verifica_ataques
+   104                                  
+   105 0000005D E8(0000)                    CALL apaga_lutadores
+   106 00000060 E8(0000)                    CALL atualiza_movimento
+   107                                  
+   108 00000063 E87800                      CALL limita_energia         ; energia nunca fica negativa
+   109                                  
+   110                                      ; Ordem de desenho: cenário primeiro, lutadores por cima
+   111 00000066 E8(0000)                    CALL desenha_cenario
+   112 00000069 E8(0000)                    CALL render_p1
+   113 0000006C E8(0000)                    CALL render_p2
+   114 0000006F E8(0000)                    CALL status_jogadores
+   115                                  
+   116                                      ; --- Timer ---
+   117 00000072 E8(0000)                    CALL timer
+   118 00000075 3D0100                      CMP AX, 1
+   119 00000078 7413                        JE .avalia                  ; tempo esgotado
+   120                                  
+   121                                      ; --- Nocaute (comparação com sinal: <= 0) ---
+   122 0000007A 813E[0000]0000              CMP word [energia_p1], 0
+   123 00000080 7E0B                        JLE .avalia
+   124 00000082 813E[0000]0000              CMP word [energia_p2], 0
+   125 00000088 7E03                        JLE .avalia
+   126                                  
+   127 0000008A E9BAFF                      JMP .loop_round
+   128                                  
+   129                                  ; =====================================================================
+   130                                  ; AVALIAÇÃO DO VENCEDOR
+   131                                  ; =====================================================================
+   132                                  .avalia:
+   133 0000008D A1[0000]                    MOV AX, [energia_p1]
+   134 00000090 3B06[0000]                  CMP AX, [energia_p2]
+   135 00000094 740B                        JE .empate
+   136 00000096 7F12                        JG .p1_venceu
+   137 00000098 C706[0000]0200              MOV word [vencedor_round], 2
+   138 0000009E E90F00                      JMP .grava
+   139                                  .empate:
+   140 000000A1 C706[0000]0000              MOV word [vencedor_round], 0
+   141 000000A7 E90600                      JMP .grava
+   142                                  .p1_venceu:
+   143 000000AA C706[0000]0100              MOV word [vencedor_round], 1
+   144                                  .grava:
+   145 000000B0 A1[0000]                    MOV AX, [vencedor_round]
+   146 000000B3 A3[0400]                    MOV [resultado], AX
+   147                                  
+   148                                  .fim:
+   149 000000B6 61                          POPA
+   150 000000B7 A1[0400]                    MOV AX, [resultado]         ; POPA restaurou AX; carrega o retorno agora
+   151 000000BA C3                          RET
+   152                                  
+   153                                  ; =====================================================================
+   154                                  ; ESPERA_FRAME: bloqueia até o contador de ticks do BIOS mudar (~55 ms)
+   155                                  ; =====================================================================
+   156                                  espera_frame:
+   157 000000BB 50                          PUSH AX
+   158 000000BC 06                          PUSH ES
+   159 000000BD B84000                      MOV AX, 0040h
+   160 000000C0 8EC0                        MOV ES, AX
+   161                                  .espera:
+   162 000000C2 26A16C00                    MOV AX, [ES:006Ch]
+   163 000000C6 3B06[0600]                  CMP AX, [ult_frame]
+   164 000000CA 74F6                        JE .espera
+   165 000000CC A3[0600]                    MOV [ult_frame], AX
+   166 000000CF 07                          POP ES
+   167 000000D0 58                          POP AX
+   168 000000D1 C3                          RET
+   169                                  
+   170                                  ; =====================================================================
+   171                                  ; LE_TICK_ROUND: AX = word baixa do contador de ticks do BIOS
+   172                                  ; =====================================================================
+   173                                  le_tick_round:
+   174 000000D2 06                          PUSH ES
+   175 000000D3 B84000                      MOV AX, 0040h
+   176 000000D6 8EC0                        MOV ES, AX
+   177 000000D8 26A16C00                    MOV AX, [ES:006Ch]
+   178 000000DC 07                          POP ES
+   179 000000DD C3                          RET
+   180                                  
+   181                                  ; =====================================================================
+   182                                  ; LIMITA_ENERGIA: se energia < 0, fixa em 0 (valores com sinal)
+   183                                  ; =====================================================================
+   184                                  limita_energia:
+   185 000000DE 813E[0000]0000              CMP word [energia_p1], 0
+   186 000000E4 7D06                        JGE .p2
+   187 000000E6 C706[0000]0000              MOV word [energia_p1], 0
+   188                                  .p2:
+   189 000000EC 813E[0000]0000              CMP word [energia_p2], 0
+   190 000000F2 7D06                        JGE .ok
+   191 000000F4 C706[0000]0000              MOV word [energia_p2], 0
+   192                                  .ok:
+   193 000000FA C3                          RET
+   194                                  
+   195                                  ; =====================================================================
+   196                                  ; RESETA_TECLAS_ENTRADA: zera todas as flags de entrada (inclui Q)
+   197                                  ; =====================================================================
+   198                                  reseta_teclas_entrada:
+   199 000000FB C606[0000]00                MOV byte [key_a], 0
+   200 00000100 C606[0000]00                MOV byte [key_d], 0
+   201 00000105 C606[0000]00                MOV byte [key_left], 0
+   202 0000010A C606[0000]00                MOV byte [key_right], 0
+   203 0000010F C606[0000]00                MOV byte [key_w], 0
+   204 00000114 C606[0000]00                MOV byte [key_s], 0
+   205 00000119 C606[0000]00                MOV byte [key_up], 0
+   206 0000011E C606[0000]00                MOV byte [key_down], 0
+   207 00000123 C606[0000]00                MOV byte [key_t], 0
+   208 00000128 C606[0000]00                MOV byte [key_m], 0
+   209 0000012D C606[0000]00                MOV byte [key_n], 0
+   210 00000132 C606[0000]00                MOV byte [key_r], 0
+   211 00000137 C606[0000]00                MOV byte [key_q], 0
+   212 0000013C C3                          RET
