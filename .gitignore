@@ -1,0 +1,9 @@
+# Ignora tudo no repositório
+*
+
+# Mas NÃO ignore a própria regra para o arquivo .gitignore
+!.gitignore
+
+# Exceção: permita manter este arquivo específico
+!*.asm
+!make.bat
