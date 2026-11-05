@@ -27,18 +27,16 @@ segment code
     ; Importação da função de menu inicial (seleção de cores dos lutadores)
     extern MENU_INICIAL, cor_p1, cor_p2, cor
 
-    ; Importação da função timer
-    extern timer
-
     ; Importação da função timer e utilitários
-    extern timer, le_tick
+    extern timer, le_tick, reset_timer
     extern ult_tick
 
     ; Importação para a tela de pausa
     extern jogo_pausado, render_pausa, apaga_pausa
 
-    ; Importação para a tela de encerramento manual
+    ; Importação para a tela de encerramento manual e rounds
     extern confirmar_saida
+    extern check_fim_round, exibe_game_over, reseta_partida
 
     ; INICIALIZAÇÃO DO SISTEMA E VÍDEO
     MOV AX, data
@@ -50,6 +48,7 @@ segment code
     ; Instala a nova interrupção de teclado (INT 9h)
     CALL instala_teclado
 
+inicia_jogo:
     ; Salva o modo de vídeo atual e configura o modo gráfico 640x480 (16h / 12h)
     MOV AH, 0Fh
     INT 10h
@@ -59,23 +58,40 @@ segment code
     INT 10h
 
     ; EXECUTA O MENU INTERATIVO DE SELEÇÃO DE CORES
-    ; (Fica retido aqui até os dois jogadores escolherem as cores e apertarem ENTER)  
-
     CALL MENU_INICIAL
 
-    ; Já presente nas suas funções de desenho do P1:
+    ; Aplica as cores
     MOV AL, [cor_p1]
     MOV byte [cor], AL
-
-    ; Já presente nas suas funções de desenho do P2:
     MOV AL, [cor_p2]
     MOV byte [cor], AL
 
-    ; Inicia o cenário e renderiza os lutadores já com as cores escolhidas em 'cor_p1' e 'cor_p2'
+novo_round:
+    ; Limpa a tela para o novo round
+    MOV AL, 12h
+    MOV AH, 0
+    INT 10h
+
+    ; Reseta as posições e energias
+    MOV word [p1_x], 150
+    MOV word [p1_y], 115
+    MOV word [p2_x], 490
+    MOV word [p2_y], 115
+    MOV word [energia_p1], 10
+    MOV word [energia_p2], 10
+    
+    ; Reseta o tempo
+    CALL reset_timer
+
+    ; Inicia o cenário e renderiza
     CALL desenha_cenario
     CALL render_p1
     CALL render_p2
     CALL status_jogadores
+
+    ; Sincroniza o timer ao começar a luta
+    CALL le_tick
+    MOV [ult_tick], AX
 
     ; LAÇO PRINCIPAL DO JOGO (GAME LOOP)
 loop_principal:
@@ -118,10 +134,20 @@ continua_game_loop:
     CALL render_p1
     CALL render_p2
     CALL desenha_cenario 
+    CALL status_jogadores
     
+    ; 4. Atualiza o Timer
     CALL timer
+    
+    ; 5. Verifica fim de round (vida zero)
+    CALL check_fim_round
     CMP AX, 1
-    ;JE tempo_acabou            
+    JNE continua_luta_normal     ; Se AX=1, reinicia o próximo round
+    JMP novo_round
+continua_luta_normal: 
+    CMP AX, 2
+    JE tela_game_over            ; Se AX=2, Game Over
+    
     JMP loop_principal
 
 modo_pausa:
@@ -134,6 +160,14 @@ modo_pausa:
     MOV [ult_tick], AX          
 
     JMP loop_principal
+
+tela_game_over:
+    CALL exibe_game_over
+    CMP AX, 1
+    JNE continua_game_over      ; Se retornou 1 (Y), volta pro menu inicial
+    JMP inicia_jogo
+continua_game_over:
+    JMP sair_jogo               ; Se retornou 0 (N), sai pro DOS
 
 ; FUNÇÕES DE RENDERIZAÇÃO
 ; Decidem qual sprite do lutador desenhar com base 
