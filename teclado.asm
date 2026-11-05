@@ -7,6 +7,7 @@ segment data
     global key_t, key_m, key_n, key_r
     global key_w, key_s, key_up, key_down
     global key_enter                      ; Exporta a flag da tecla Enter
+    global key_y
 
     extern jogo_pausado, p_travado
 
@@ -24,6 +25,7 @@ segment data
     key_up       db 0
     key_down     db 0
     key_enter    db 0                      ; Estado da tecla Enter (0=solta, 1=pressionada)
+    key_y db 0
 
     ; Armazenamento do vetor original da interrupção de teclado do DOS
     velho_isr_off dw 0
@@ -252,8 +254,18 @@ continua_seta_p:
     JMP seta_p
 continua_reseta_p:
     CMP AL, 99h
-    JNE continua_final
+    JNE continua_seta_y
     JMP reseta_p
+
+    ; TECLA Y (Scancode 15h / Break 95h) PARA O MENU SIM/NAO
+continua_seta_y:
+    CMP AL, 15h
+    JNE continua_reseta_y
+    JMP seta_y
+continua_reseta_y:
+    CMP AL, 95h
+    JNE continua_final           ; <--- E aqui vai para o final
+    JMP reseta_y
 
 continua_final:
     JMP fim_int9
@@ -353,6 +365,13 @@ seta_p:
 
 reseta_p:
     MOV byte [p_travado], 0     ; Destrava quando o 'P' for solto
+    JMP fim_int9
+
+seta_y:
+    MOV byte [key_y], 1
+    JMP fim_int9
+reseta_y:
+    MOV byte [key_y], 0
     JMP fim_int9
 
 ; FIM DA INTERRUPÇÃO

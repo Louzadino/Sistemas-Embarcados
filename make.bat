@@ -9,4 +9,5 @@ call nasm fisica
 call nasm menu1
 call nasm timer
 call nasm pausa
-call freelink main teclado cenario lutador linec status colisoes fisica menu1 timer pausa
+call nasm encerra
+call freelink main teclado cenario lutador linec status colisoes fisica menu1 timer pausa encerra

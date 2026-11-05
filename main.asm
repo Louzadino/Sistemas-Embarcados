@@ -37,6 +37,9 @@ segment code
     ; Importação para a tela de pausa
     extern jogo_pausado, render_pausa, apaga_pausa
 
+    ; Importação para a tela de encerramento manual
+    extern confirmar_saida
+
     ; INICIALIZAÇÃO DO SISTEMA E VÍDEO
     MOV AX, data
     MOV DS, AX
@@ -81,7 +84,15 @@ loop_principal:
     ; Verifica se quer sair do jogo 
     CMP byte [key_q], 1
     JNE continua_game_loop
+    
+    ; Chama a tela de confirmação (Y/N)
+    CALL confirmar_saida
+    CMP AX, 1
+    JNE continua_loop_principal  ; Se AX = 1, o jogador apertou Y e o jogo deve fechar
     JMP sair_jogo
+continua_loop_principal:
+    MOV byte [key_q], 0          ; Se não, reseta a flag do Q e volta pro jogo
+    JMP loop_principal           ; Recomeça o loop para não pular a física atual
 
 continua_game_loop:
     ; VERIFICAÇÃO DE PAUSA 
