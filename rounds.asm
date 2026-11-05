@@ -3,7 +3,8 @@
 
 segment data
     global vitorias_p1, vitorias_p2, round_atual
-    
+    global msg_morte_subita
+
     vitorias_p1     dw 0
     vitorias_p2     dw 0
     round_atual     dw 1
@@ -22,8 +23,12 @@ segment data
     msg_go_p2       db 'PARABENS PLAYER 2 E O CAMPEAO'   ; 29 chars
     msg_go_menu     db 'JOGAR NOVAMENTE (Y) / SAIR (N)'  ; 30 chars
 
+    ; Mensagem round de empate
+    msg_morte_subita db 'EMPATE - MORTE SUBITA'
+
 segment code
     global check_fim_round, exibe_game_over, reseta_partida
+    global verifica_timeout
     
     extern energia_p1, energia_p2
     extern escrever_na_tela
@@ -205,4 +210,28 @@ delay_round:
     POP CX
     LOOP .del2
     POP CX
+    RET
+
+; Verifica quem ganhou por timeout ou aciona Morte Súbita
+; Retorna: AX=1 (Alguém ganhou), AX=3 (Morte Súbita)
+verifica_timeout:
+    MOV CX, [energia_p1]
+    CMP CX, [energia_p2]
+    JG .p1_ganhou_tempo
+    JL .p2_ganhou_tempo
+    
+    ; Se chegou aqui, vidas são iguais. Prepara Morte Súbita!
+    MOV word [energia_p1], 1
+    MOV word [energia_p2], 1
+    MOV AX, 3                   ; Retorna código 3 (Empate)
+    RET
+
+.p1_ganhou_tempo:
+    MOV word [energia_p2], 0    ; Zera a vida do P2 para check_fim_round processar
+    MOV AX, 1                   ; Retorna código 1 (Desempate resolvido)
+    RET
+
+.p2_ganhou_tempo:
+    MOV word [energia_p1], 0    ; Zera a vida do P1 para check_fim_round processar
+    MOV AX, 1                   ; Retorna código 1 (Desempate resolvido)
     RET

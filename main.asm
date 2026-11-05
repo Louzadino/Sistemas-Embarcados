@@ -38,6 +38,10 @@ segment code
     extern confirmar_saida
     extern check_fim_round, exibe_game_over, reseta_partida
 
+    ; Importação para tela de morte súbita (caso empate)
+    extern verifica_timeout, msg_morte_subita
+    extern escrever_na_tela
+
     ; INICIALIZAÇÃO DO SISTEMA E VÍDEO
     MOV AX, data
     MOV DS, AX
@@ -67,6 +71,8 @@ inicia_jogo:
     MOV byte [cor], AL
 
 novo_round:
+    MOV byte [em_morte_subita], 0   ; Desliga FLAG Round morte súbita logo no início
+
     ; Limpa a tela para o novo round
     MOV AL, 12h
     MOV AH, 0
@@ -113,8 +119,10 @@ continua_loop_principal:
 continua_game_loop:
     ; VERIFICAÇÃO DE PAUSA 
     CMP byte [jogo_pausado], 1
-    JE modo_pausa                ; Se estiver 1, vai pro render de pausa
+    JNE continua_game_loop2      ; Se estiver 1, vai pro render de pausa
+    JMP modo_pausa
 
+continua_game_loop2:
     ; Verifica se acabou de sair da pausa (transição 1 -> 0)
     CMP byte [estado_anterior_pausa], 1
     JNE .luta_normal
@@ -138,7 +146,18 @@ continua_game_loop:
     
     ; 4. Atualiza o Timer
     CALL timer
-    
+    CMP AX, 1                  ; O timer zerou?
+    JNE executa_check_fim_round    
+
+    CMP byte [em_morte_subita], 1 ; Nós já estamos na morte súbita?
+    JE executa_check_fim_round    ; Se sim, pula a verificação de empate e continua a luta
+
+    ; Se zerou, chama a lógica do rounds.asm
+    CALL verifica_timeout
+    CMP AX, 3                  ; Retornou 3? Então é Morte Súbita
+    JE morte_subita
+
+executa_check_fim_round:
     ; 5. Verifica fim de round (vida zero)
     CALL check_fim_round
     CMP AX, 1
@@ -148,6 +167,50 @@ continua_luta_normal:
     CMP AX, 2
     JE tela_game_over            ; Se AX=2, Game Over
     
+    JMP loop_principal
+
+morte_subita:
+    MOV byte [em_morte_subita], 1  ; LIGA A FLAG DE MORTE SÚBITA
+
+    ; Limpa a tela
+    MOV AL, 12h
+    MOV AH, 0
+    INT 10h
+
+    ; Escreve a mensagem de Morte Súbita
+    MOV BP, msg_morte_subita
+    MOV CX, 21
+    MOV DH, 14
+    MOV DL, 29
+    MOV BL, 0Ch                 ; Vermelho claro
+    CALL escrever_na_tela
+    
+    CALL delay
+    CALL delay
+    CALL delay
+    CALL delay
+
+    ; Limpa a tela novamente
+    MOV AL, 12h
+    MOV AH, 0
+    INT 10h
+
+    ; Reseta apenas posições (as vidas já foram setadas para 1 no rounds.asm)
+    MOV word [p1_x], 150
+    MOV word [p1_y], 115
+    MOV word [p2_x], 490
+    MOV word [p2_y], 115
+    
+    ;CALL reset_timer
+
+    CALL desenha_cenario
+    CALL render_p1
+    CALL render_p2
+    CALL status_jogadores
+
+    CALL le_tick
+    MOV [ult_tick], AX
+
     JMP loop_principal
 
 modo_pausa:
@@ -244,6 +307,7 @@ del1:
 segment data
     modo_anterior db 0           ; Armazena o modo de vídeo anterior
     estado_anterior_pausa db 0   ; Variável para saber quando apagar a msg "PAUSED"
+    em_morte_subita db 0         ; FLAG (0 = Round normal | 1 = Morte Súbita)
 
 segment stack stack
     resb 512
