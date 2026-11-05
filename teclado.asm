@@ -234,7 +234,7 @@ continua_reseta_down:
     JMP reseta_down
 continua_reseta_down_k:
     CMP AL, 0A5h        ; Tecla K (Break)
-    JNE continua_seta_enter           ; <-- 2. NOVO: Desvia para testar a tecla Enter
+    JNE continua_seta_enter           
     JMP reseta_down
 
     ; TECLA ENTER (Scancode 1Ch / Break 9Ch) 
@@ -264,7 +264,7 @@ continua_seta_y:
     JMP seta_y
 continua_reseta_y:
     CMP AL, 95h
-    JNE continua_final           ; <--- E aqui vai para o final
+    JNE continua_final           
     JMP reseta_y
 
 continua_final:

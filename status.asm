@@ -21,10 +21,8 @@ global colunaPixel
 
 extern vitorias_p1, vitorias_p2
 
-; ==================================================
 ; FUNCAO: STATUS_JOGADORES
 ; Desenha os nomes, o VS e as barras de energia
-; ==================================================
 status_jogadores:
     PUSH AX
     PUSH BX
@@ -130,7 +128,6 @@ status_jogadores:
     RET
 
 
-; ==================================================
 ; FUNCAO: ESCREVER_NA_TELA
 ; Entrada:
 ;   BP = endereco do texto
@@ -138,7 +135,6 @@ status_jogadores:
 ;   DH = linha
 ;   DL = coluna
 ;   BL = cor
-; ==================================================
 escrever_na_tela:
     PUSH AX
     PUSH BX
@@ -164,10 +160,8 @@ escrever_na_tela:
     RET
 
 
-; ==================================================
 ; FUNCAO: BARRA_DE_ENERGIA
 ; Desenha dez quadrados alinhados horizontalmente
-; ==================================================
 barra_de_energia:
     PUSH AX
     PUSH BX
@@ -209,11 +203,8 @@ fim_barra:
     POP AX
     RET
 
-
-; ==================================================
 ; FUNCAO: QUADRADO
 ; Desenha um quadrado verde de 13 x 13 pixels
-; ==================================================
 quadrado:
     PUSH AX
     PUSH BX

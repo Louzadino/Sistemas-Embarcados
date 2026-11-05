@@ -1,5 +1,3 @@
-; =====================================================================
-; ARQUIVO: menu_inicial.asm  (versão corrigida)
 ; RESUMO: Menu de seleção de cores em duas colunas com círculos coloridos.
 ;   P1 escolhe via W / S (seta -> à esquerda dos círculos).
 ;   P2 escolhe via Seta Cima / Seta Baixo (seta <- à direita dos círculos).
@@ -9,15 +7,12 @@
 ; Layout (modo 12h, 640x480, fonte 8x16, y dos círculos contado de baixo):
 ;   círculo i  -> linha de texto 8 + 3*i  (3 linhas = 48 px = espacamento_y)
 ;   centro y   -> base_y_circulo - i*48
-; =====================================================================
 
 ; 0 = os dois jogadores NÃO podem confirmar com a mesma cor
 ; 1 = cores iguais permitidas
 %assign PERMITE_COR_IGUAL 0
 
-; ---------------------------------------------------------------------
 ; Constantes do layout
-; ---------------------------------------------------------------------
 pos_x_p1        equ 170     ; X do centro da coluna do P1 (pixels)
 pos_x_p2        equ 470     ; X do centro da coluna do P2 (pixels)
 base_y_circulo  equ 343     ; Y (de baixo) do centro do círculo 0 = 479 - (8*16+8)
@@ -67,9 +62,7 @@ segment code
     extern full_circle, circle
     extern key_w, key_s, key_up, key_down, key_enter
 
-; ---------------------------------------------------------------------
 ; Macro: escreve texto. ptr, tamanho, linha, coluna, cor
-; ---------------------------------------------------------------------
 %macro TEXTO 5
     MOV BP, %1
     MOV CX, %2
@@ -79,11 +72,9 @@ segment code
     CALL escreve
 %endmacro
 
-; ---------------------------------------------------------------------
 ; Macro: desenha seta + anel de uma coluna para o índice SI.
 ; idx_var, ptr_seta, coluna_seta, x_circulo
 ; Selecionado -> branco; os demais -> preto (apaga o que havia antes).
-; ---------------------------------------------------------------------
 %macro ITEM 4
     MOV BL, 0
     CMP SI, [%1]
@@ -107,9 +98,7 @@ segment code
     CALL anel
 %endmacro
 
-; =====================================================================
 ; FUNÇÃO CENTRAL: MENU_INICIAL
-; =====================================================================
 MENU_INICIAL:
     PUSHA
     PUSH ES
@@ -162,7 +151,7 @@ loop_menu:
     JE loop_menu                ; mesma cor: ignora o ENTER
 %endif
 
-    ; --- Salva as cores escolhidas ---
+    ; Salva as cores escolhidas 
     MOV BX, [idx_p1]
     MOV AL, [tabela_cores + BX]
     MOV [cor_p1], AL
@@ -180,11 +169,9 @@ loop_menu:
     POPA
     RET
 
-; =====================================================================
 ; WRAPPERS SEGUROS PARA A BIBLIOTECA GRÁFICA
 ; (preservam todos os registradores e a pilha, qualquer que seja a
 ;  convenção de chamada: RET 6 ou cdecl)
-; =====================================================================
 
 ; escreve: BP=string, CX=tamanho, DH=linha, DL=coluna, BL=cor
 escreve:
@@ -230,9 +217,7 @@ y_do_circulo:
     POP AX
     RET
 
-; =====================================================================
 ; DESENHO ESTÁTICO (feito uma única vez)
-; =====================================================================
 desenha_estatico:
     PUSHA
 
@@ -257,9 +242,7 @@ desenha_estatico:
     POPA
     RET
 
-; =====================================================================
 ; DESENHO DA SELEÇÃO (setas + anéis) — só quando o índice muda
-; =====================================================================
 desenha_selecao:
     PUSHA
 
@@ -279,9 +262,7 @@ desenha_selecao:
     POPA
     RET
 
-; =====================================================================
 ; NAVEGAÇÃO DOS JOGADORES (0 a 5)
-; =====================================================================
 processa_input_p1:
     CMP byte [key_w], 1
     JNE reseta_w_p1
@@ -338,9 +319,7 @@ reseta_down_p2:
 fim_input_p2:
     RET
 
-; =====================================================================
 ; Limpa a tela e volta ao modo 640x480
-; =====================================================================
 apaga_menu:
     PUSH AX
     MOV AH, 00h
@@ -349,9 +328,7 @@ apaga_menu:
     POP AX
     RET
 
-; =====================================================================
 ; Espera 1 tick do relógio do BIOS (~55 ms), independente da CPU
-; =====================================================================
 delay_menu:
     PUSH AX
     PUSH ES

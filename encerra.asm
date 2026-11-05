@@ -24,7 +24,7 @@ confirmar_saida:
     PUSH DX
     PUSH BP
 
-    ; --- 1. Desenha os textos de confirmação em amarelo ---
+    ; 1. Desenha os textos de confirmação em amarelo 
     MOV BP, msg_confirma1
     MOV CX, 18
     MOV DH, 13                  ; Linha 13
@@ -39,13 +39,13 @@ confirmar_saida:
     MOV BL, 0Eh                 
     CALL escrever_na_tela
 
-    ; --- 2. Loop de Pausa (Aguarda resposta pelas flags do teclado) ---
+    ; 2. Loop de pausa (aguarda resposta pelas flags do teclado) 
 .aguarda_resposta:
     CMP byte [key_y], 1
     JE .confirmou_sim
     CMP byte [key_n], 1
     JE .cancelou_nao
-    JMP .aguarda_resposta       ; Prende o jogo aqui (Game Loop não avança)
+    JMP .aguarda_resposta       ; Prende o jogo aqui (game loop não avança)
 
 .confirmou_sim:
 .espera_y_soltar:
@@ -57,9 +57,9 @@ confirmar_saida:
 .cancelou_nao:
 .espera_n_soltar:
     CMP byte [key_n], 1
-    JE .espera_n_soltar         ; Aguarda soltar o 'N' completamente!
+    JE .espera_n_soltar         ; Aguarda soltar o 'N' completamente
 
-    ; --- 3. Apaga as mensagens da tela (escreve em preto) ---
+    ; 3. Apaga as mensagens da tela (escreve em preto) 
     MOV BP, msg_confirma1
     MOV CX, 18
     MOV DH, 13
@@ -74,9 +74,9 @@ confirmar_saida:
     MOV BL, 0                   
     CALL escrever_na_tela
 
-    ; --- 4. FLUSH DE TECLAS E TIMER (A Mágica acontece aqui) ---
-    ; Zera as teclas violentamente. Isso garante que a main.asm não veja o 'N'
-    ; como um chute do Player 2 e que o menu não reabra pelo 'Q'.
+    ; 4. FLUSH DE TECLAS E TIMER 
+    ; Zera as teclas . Isso garante que a main.asm não veja o 'N'
+    ; como um chute do player 2 e que o menu não reabra pelo 'Q'.
     MOV byte [key_n], 0
     MOV byte [key_y], 0
     MOV byte [key_q], 0

@@ -366,7 +366,7 @@ desenha_vencedor_go:
 .desenha_boneco:
     MOV byte [cor], AL          ; Aplica a cor do jogador vencedor
 
-    ; Corpo do Lutador (Mesmas proporções do desenho normal, mas em posição central)
+    ; Corpo do Lutador (mesmas proporções do desenho normal, mas em posição central)
     CIRCLE CX, 0, DX, 0           ; Cabeça
     LINE CX, 0, DX, -10, 0, -35   ; Tronco/Corpo
     LINE CX, 0, DX, -15, -10, -30 ; Braço Esquerdo levantado

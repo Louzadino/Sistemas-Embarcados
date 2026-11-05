@@ -1,10 +1,7 @@
-; =====================================================================
-; ARQUIVO: colisoes.asm
 ; RESUMO: Módulo responsável por gerenciar o sistema de combate do jogo.
 ; Valida as teclas de ataque (socos e chutes), verifica se há colisão 
 ; ou distância válida entre os jogadores, processa a redução de energia,
 ; atualiza a HUD e implementa travas para evitar dano contínuo por pressão.
-; =====================================================================
 
 segment data
     global soco_p1_travado, soco_p2_travado
@@ -31,10 +28,8 @@ segment code
     extern desenha_chute_p1, desenha_chute_p2
     extern render_p1, render_p2
 
-; ==================================================
 ; FUNÇÃO CENTRAL: VERIFICA_ATAQUES
 ; Chama sequencialmente a verificação de golpes para ambos os jogadores
-; ==================================================
 verifica_ataques:
     PUSH AX
     CALL verifica_soco_p1
@@ -44,19 +39,11 @@ verifica_ataques:
     POP AX
     RET
 
-; ==================================================
 ; ROTINA: SOCO DO PLAYER 1 (Tecla T)
-; ==================================================
 verifica_soco_p1:
     CMP byte [key_t], 1             ; Verifica se a tecla T está pressionada
     JNE reseta_soco_p1              ; Se não estiver, reseta a trava do soco
-    
-    ; Desenha temporariamente o frame de soco do P1 na tela
-    ;CALL apaga_lutadores
-    ;CALL desenha_soco_p1
-    ;CALL render_p2      
-    ;CALL desenha_cenario
-
+        
     CMP byte [soco_p1_travado], 1   ; Se o golpe já foi contabilizado nesta pressão, ignora
     JE fim_soco_p1
     
@@ -68,13 +55,13 @@ verifica_soco_p1:
     CMP AX, 45                      ; Verifica se está dentro do alcance do soco (<= 45 pixels)
     JG fim_soco_p1
     
-    ; Validação de Defesa (se o P2 estiver pulando no ar ou agachado, o golpe falha)
+    ; Validação de defesa (se o P2 estiver pulando no ar ou agachado, o golpe falha)
     CMP word [p2_y], 115
     JG fim_soco_p1                  ; P2 está no ar (pulando)
     CMP byte [p2_estado], 1
     JE fim_soco_p1                  ; P2 está agachado
 
-    ; Validação e Aplicação do Dano no P2
+    ; Validação e aplicação do dano no P2
     CMP word [energia_p2], 0
     JE fim_soco_p1                  ; Se já estiver sem energia, não faz nada
     DEC word [energia_p2]           ; Reduz 1 unidade de energia do P2
@@ -85,9 +72,7 @@ reseta_soco_p1:
     MOV byte [soco_p1_travado], 0   ; Libera a trava quando a tecla é solta
     RET
 
-; ==================================================
 ; ROTINA: CHUTE DO PLAYER 1 (Tecla R)
-; ==================================================
 verifica_chute_p1:
     CMP byte [key_r], 1             ; Verifica se a tecla R está pressionada
     JNE reseta_chute_p1
@@ -123,9 +108,7 @@ reseta_chute_p1:
     MOV byte [chute_p1_travado], 0
     RET
 
-; ==================================================
 ; ROTINA: SOCO DO PLAYER 2 (Tecla M)
-; ==================================================
 verifica_soco_p2:
     CMP byte [key_m], 1             ; Verifica se a tecla M está pressionada
     JNE reseta_soco_p2
@@ -163,9 +146,7 @@ reseta_soco_p2:
     MOV byte [soco_p2_travado], 0
     RET
 
-; ==================================================
 ; ROTINA: CHUTE DO PLAYER 2 (Tecla N)
-; ==================================================
 verifica_chute_p2:
     CMP byte [key_n], 1             ; Verifica se a tecla N está pressionada
     JNE reseta_chute_p2

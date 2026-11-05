@@ -7,7 +7,6 @@ global cor
 segment code
 ..start:
 
-;-----------------------------------------------------------------------------
 ;função cursor
 ; Parametros:
 ; 	DH = linha (0-29) e  DL = coluna  (0-79)
@@ -32,7 +31,6 @@ cursor:
 		POP		AX
 		POPf
 		RET
-;-----------------------------------------------------------------------------
 ;função caracter escrito na posição do cursor
 ; Parametros:
 ; 	AL = caracter a ser escrito
@@ -60,7 +58,6 @@ caracter:
 		POP		AX
 		POPf
 		RET
-;-----------------------------------------------------------------------------
 ;função plot_xy
 ; Parametros:
 ;	PUSH x; PUSH y; CALL plot_xy;  (x<639, y<479)
@@ -91,7 +88,7 @@ plot_xy:
 		POPf
 		POP		BP
 		RET		4
-;-----------------------------------------------------------------------------
+
 ;função circle
 ; Parametros:
 ;	PUSH xc; PUSH yc; PUSH r; CALL circle;  (xc+r<639,yc+r<479)e(xc-r>0,yc-r>0)
@@ -233,7 +230,7 @@ fim_circle:
 	POPf
 	POP		BP
 	RET		6
-;-----------------------------------------------------------------------------
+
 ;função full_circle
 ; Parametros:
 ;	PUSH xc; PUSH yc; PUSH r; CALL full_circle;  (xc+r<639,yc+r<479)e(xc-r>0,yc-r>0)
@@ -360,7 +357,7 @@ fim_full_circle:
 	POPf
 	POP		BP
 	RET		6
-;-----------------------------------------------------------------------------
+
 ;função line
 ; Parametros:
 ;	PUSH x1; PUSH y1; PUSH x2; PUSH y2; CALL line;  (x<639, y<479)
@@ -517,7 +514,7 @@ fim_line:
 		POPf
 		POP		BP
 		RET		8
-;*******************************************************************
+
 segment data
 
 cor		db		branco_intenso
@@ -544,6 +541,6 @@ coluna  		dw  	0
 deltAX			dw		0
 deltay			dw		0	
 mens    		db  	'Funcao Grafica'
-;*************************************************************************
+
 
 stacktop:

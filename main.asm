@@ -147,7 +147,7 @@ continua_game_loop2:
     
     ; 4. Atualiza o Timer
     CALL timer
-    CMP AX, 1                  ; O timer zerou?
+    CMP AX, 1                     ; O timer zerou?
     JNE executa_check_fim_round    
 
     CMP byte [em_morte_subita], 1 ; Nós já estamos na morte súbita?
@@ -155,7 +155,7 @@ continua_game_loop2:
 
     ; Se zerou, chama a lógica do rounds.asm
     CALL verifica_timeout
-    CMP AX, 3                  ; Retornou 3? Então é Morte Súbita
+    CMP AX, 3                  ; Retornou 3? Então é morte súbita
     JE morte_subita
 
 executa_check_fim_round:
@@ -243,7 +243,7 @@ global render_p1, render_p2
 extern key_t   ; (Garante que enxerga a variável exportada pelo teclado.asm)
 
 render_p1:
-    CMP byte [key_t], 1     ; 1. Verifica se o P1 está atacando (Prioridade máxima visual)
+    CMP byte [key_t], 1     ; 1. Verifica se o P1 está atacando
     JE r_soco_p1
 
     CMP byte [p1_estado], 1 ; 2. Verifica se está agachado      

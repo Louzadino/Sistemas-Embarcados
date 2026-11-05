@@ -1,5 +1,5 @@
-; RESUMO: Gere o sistema de melhor de 3 rounds, regista as vitórias,
-; exibe as mensagens de fim de round e a tela de Game Over.
+; RESUMO: Gere o sistema de melhor de 3 rounds, registra as vitórias,
+; exibe as mensagens de fim de round e a tela de game over.
 
 segment data
     global vitorias_p1, vitorias_p2, round_atual
@@ -104,7 +104,7 @@ exibe_game_over:
     ; Escreve GAME OVER
     MOV BP, msg_go_titulo
     MOV CX, 13
-    MOV DH, 3                   ; <<< NOVO LAYOUT DA IMAGEM (Linha 3)
+    MOV DH, 3                   
     MOV DL, 33                  
     MOV BL, 0Fh                 ; Branco
     CALL escrever_na_tela
@@ -120,7 +120,7 @@ exibe_game_over:
     MOV AX, 1                   ; Passamos 1 no AX para a função de desenho saber quem ganhou
 .imprime_campeao:
     MOV CX, 24
-    MOV DH, 6                   ; <<< NOVO LAYOUT DA IMAGEM (Linha 6)
+    MOV DH, 6                   
     MOV DL, 28
     MOV BL, 0Fh                 ; Branco
     CALL escrever_na_tela
@@ -131,21 +131,21 @@ exibe_game_over:
     ; Mostra opções de Menu
     MOV BP, msg_go_menu
     MOV CX, 16
-    MOV DH, 20                  ; <<< NOVO LAYOUT (Linha 20)
+    MOV DH, 20                  
     MOV DL, 32
     MOV BL, 0Fh                 ; Branco
     CALL escrever_na_tela
 
     MOV BP, msg_go_y
     MOV CX, 7
-    MOV DH, 23                  ; <<< NOVO LAYOUT (Linha 23)
+    MOV DH, 23                  
     MOV DL, 36
     MOV BL, 0Fh                 
     CALL escrever_na_tela
 
     MOV BP, msg_go_n
     MOV CX, 7
-    MOV DH, 25                  ; <<< NOVO LAYOUT (Linha 25)
+    MOV DH, 25                  
     MOV DL, 36
     MOV BL, 0Fh                 
     CALL escrever_na_tela
@@ -248,7 +248,7 @@ verifica_timeout:
     JG .p1_ganhou_tempo
     JL .p2_ganhou_tempo
     
-    ; Se chegou aqui, vidas são iguais. Prepara Morte Súbita!
+    ; Se chegou aqui, vidas são iguais. Prepara morte súbita
     MOV word [energia_p1], 1
     MOV word [energia_p2], 1
     MOV AX, 3                   ; Retorna código 3 (Empate)

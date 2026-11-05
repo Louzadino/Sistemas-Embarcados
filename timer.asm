@@ -1,21 +1,8 @@
-; =====================================================================
-; ARQUIVO: timer.asm  (versão corrigida)
 ; RESUMO: Contagem regressiva do jogo (MM:SS) desenhada na HUD.
 ;
-; TEMPORIZAÇÃO: usa o contador de ticks do BIOS em 0040:006Ch, que é
-; incrementado pela IRQ0 do PIT 8253/8254 (canal 0, ~18,2065 Hz) em
-; qualquer PC/XT/AT. O tempo passa em tempo real, independente da
+; TEMPORIZAÇÃO: usa o contador de ticks do BIOS em 0040:006Ch. 
+; O tempo passa em tempo real, independente da
 ; velocidade da CPU e do framerate do game loop, sem laços de atraso.
-;
-; Funções:
-;   reset_timer   : reinicia em 03:00 (chame antes de cada partida)
-;   timer         : atualiza o relógio; AX = 1 se chegou a 00:00, senão 0
-;   desenha_timer : redesenha a string atual (chame a cada frame se o
-;                   seu loop limpa a tela; 'timer' já chama por você)
-; =====================================================================
-
-; 18,2065 ticks/s * 5 = 91,03  ->  91 "meio-ticks" (ticks*5) = 5 s / 5
-; Acumulamos ticks*5 e descontamos 91 por segundo (erro < 0,04 %).
 ticks_x5_por_seg    equ 91
 max_delta_ticks     equ 200         ; limita saltos (pausa, travamento)
 cor_timer           equ 0Ch 
@@ -36,9 +23,7 @@ segment code
     global le_tick
     extern escrever_na_tela
 
-; =====================================================================
 ; RESET_TIMER: volta para 03:00
-; =====================================================================
 reset_timer:
     MOV word [minutos], 3
     MOV word [segundos], 0
@@ -50,10 +35,8 @@ reset_timer:
     MOV byte [str_timer + 4], '0'
     RET
 
-; =====================================================================
 ; TIMER
 ; Retorna: AX = 1 se o tempo ACABOU (00:00), AX = 0 se ainda HÁ TEMPO.
-; =====================================================================
 timer:
     PUSH BX
     PUSH CX
@@ -72,8 +55,8 @@ timer:
     OR AX, [segundos]
     JZ .desenha
 
-    ; --- ticks decorridos desde a última chamada (aritmética de 16 bits
-    ;     módulo 65536: correta mesmo quando o contador dá a volta) ---
+    ;  ticks decorridos desde a última chamada (aritmética de 16 bits
+    ;     módulo 65536: correta mesmo quando o contador dá a volta) 
     CALL le_tick
     MOV DX, AX
     SUB DX, [ult_tick]
@@ -92,15 +75,10 @@ timer:
     CMP word [acc_ticks], ticks_x5_por_seg
     JB .fim_conta
     SUB word [acc_ticks], ticks_x5_por_seg
-
-    ;CMP CX, 0
-    ;JNE .ja_apagou
-    ;MOV BL, 0                       ; apaga o texto antigo (preto)
-    ;CALL escreve_timer
     MOV CX, 1
 .ja_apagou:
 
-    ; --- decrementa 1 segundo ---
+    ; decrementa 1 segundo 
     CMP word [segundos], 0
     JNE .dec_seg
     CMP word [minutos], 0
@@ -137,9 +115,7 @@ timer:
     POP BX
     RET
 
-; =====================================================================
-; LE_TICK: AX = word baixa do contador de ticks do BIOS (0040:006C)
-; =====================================================================
+; LE_TICK: AX = word baixa do contador de ticks do BIOS 
 le_tick:
     PUSH ES
     MOV AX, 0040h
@@ -148,9 +124,7 @@ le_tick:
     POP ES
     RET
 
-; =====================================================================
 ; FORMATA_TIMER: converte minutos/segundos para ASCII em 'str_timer'
-; =====================================================================
 formata_timer:
     PUSH AX
     PUSH BX
@@ -174,9 +148,7 @@ formata_timer:
     POP AX
     RET
 
-; =====================================================================
 ; DESENHA_TIMER: escreve "MM:SS" em branco (sem parâmetros)
-; =====================================================================
 desenha_timer:
     PUSH BX
     MOV BL, cor_timer
@@ -184,10 +156,8 @@ desenha_timer:
     POP BX
     RET
 
-; =====================================================================
 ; ESCREVE_TIMER: BL = cor (0 apaga, 0Fh branco)
 ; Linha 3, coluna 37. Garante ES = DS para o INT 10h/AH=13h (ES:BP).
-; =====================================================================
 escreve_timer:
     PUSH AX
     PUSH CX

@@ -1,14 +1,14 @@
 ; RESUMO: Módulo responsável por gerenciar a física e os movimentos dos
 ; lutadores. Controla a gravidade, a mecânica de pulo, a verificação do
-; estado de agachamento e a movimentação horizontal (esquerda/direita),
+; estado de agachamento e a movimentação horizontal,
 ; garantindo também os limites da arena e a colisão de corpos no eixo X.
 
 segment data
     global p1_vy, p2_vy
     global p1_estado, p2_estado
     
-    p1_vy dw 0          ; Velocidade vertical atual do Player 1
-    p2_vy dw 0          ; Velocidade vertical atual do Player 2
+    p1_vy dw 0          ; Velocidade vertical atual do player 1
+    p2_vy dw 0          ; Velocidade vertical atual do player 2
     p1_estado db 0      ; Estado do P1: 0 = Em pé, 1 = Agachado
     p2_estado db 0      ; Estado do P2: 0 = Em pé, 1 = Agachado
 
@@ -20,7 +20,7 @@ segment code
     extern key_w, key_s, key_up, key_down
 
 ; FUNÇÃO CENTRAL: ATUALIZA_MOVIMENTO
-; Orquestra a verificação de agachamento e a física de cada lutador
+; Organiza a verificação de agachamento e a física de cada lutador
 atualiza_movimento:
     PUSH AX
     CALL estado_agachar
@@ -30,9 +30,9 @@ atualiza_movimento:
     RET
 
 ; ROTINA: ESTADO_AGACHAR
-; Verifica se os jogadores estão tentando se abaixar (teclas S e Down)
+; Verifica se os jogadores estão tentando se abaixar (teclas S e down)
 estado_agachar:
-    ; Avalia o agachamento do Player 1 
+    ; Avalia o agachamento do player 1 
     MOV byte [p1_estado], 0
     CMP word [p1_y], 115        ; Se o P1 estiver no ar, não pode abaixar
     JG check_p2_crouch      
@@ -41,7 +41,7 @@ estado_agachar:
     MOV byte [p1_estado], 1     ; Define P1 como agachado
 
 check_p2_crouch:
-    ; Avalia o agachamento do Player 2 
+    ; Avalia o agachamento do player 2 
     MOV byte [p2_estado], 0
     CMP word [p2_y], 115        ; Se o P2 estiver no ar, não pode abaixar
     JG fim_agachar
@@ -53,7 +53,7 @@ fim_agachar:
 
 ; ROTINA: FÍSICA DO PLAYER 1 (Pulo, Gravidade e Eixo X)
 fisica_p1:
-    ; --- Tratamento do Pulo (P1) ---
+    ; Tratamento do Pulo (P1) 
     CMP word [p1_y], 115
     JG aplica_gravidade_p1      ; Se estiver no ar, continua aplicando a gravidade
     
@@ -108,7 +108,7 @@ fisica_p2:
     CMP byte [p2_estado], 1
     JE processa_x_p2
     
-    CMP byte [key_up], 1        ; Verifica se a tecla Seta para Cima foi pressionada
+    CMP byte [key_up], 1        ; Verifica se a tecla seta para cima foi pressionada
     JNE processa_x_p2
     MOV word [p2_vy], 24        ; Impulso inicial para cima
     JMP aplica_gravidade_p2
@@ -124,11 +124,11 @@ aplica_gravidade_p2:
     MOV word [p2_vy], 0
 
 processa_x_p2:
-    ; Movimentação Horizontal no Eixo X (P2) 
+    ; Movimentação horizontal no eixo X (P2) 
     CMP byte [p2_estado], 1
     JE fim_fisica_p2       
 
-    ; Movimento para a Esquerda (Tecla Seta Esquerda)
+    ; Movimento para a esquerda (tecla seta esquerda)
     CMP byte [key_left], 1
     JNE tenta_right
     MOV AX, [p1_x]
